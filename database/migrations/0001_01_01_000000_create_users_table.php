@@ -17,6 +17,9 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('whatsapp', 20)->nullable();
+            $table->text('address')->nullable();
+            $table->string('program')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

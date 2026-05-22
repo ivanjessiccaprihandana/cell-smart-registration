@@ -7,10 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'whatsapp', 'address', 'program'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -28,5 +30,31 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get all program enrollments for this user
+     */
+    public function programEnrollments(): HasMany
+    {
+        return $this->hasMany(ProgramEnrollment::class);
+    }
+
+    /**
+     * Get all programs this user is enrolled in
+     */
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class, 'program_enrollments')
+                    ->withTimestamps()
+                    ->withPivot('enrolled_at', 'status');
+    }
+
+    /**
+     * Get active program enrollments
+     */
+    public function activePrograms()
+    {
+        return $this->programs()->wherePivot('status', 'active');
     }
 }
