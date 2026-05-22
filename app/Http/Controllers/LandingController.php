@@ -10,4 +10,6 @@ class LandingController extends Controller
     {
         return view('home');
     }
+
+ 
 }
