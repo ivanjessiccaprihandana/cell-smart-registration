@@ -16,6 +16,7 @@
             <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
                 <a class="hover:text-indigo-600 transition-colors" href="#home">Home</a>
                 <a class="hover:text-indigo-600 transition-colors" href="#programs">Program</a>
+                <a class="hover:text-indigo-600 transition-colors" href="#tutors">Tutors</a>
                 <a class="hover:text-indigo-600 transition-colors" href="#pricing">Pricing</a>
                 <a class="hover:text-indigo-600 transition-colors" href="#testimonials">Testimonials</a>
             </nav>
