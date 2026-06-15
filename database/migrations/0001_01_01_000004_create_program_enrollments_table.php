@@ -15,12 +15,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('program_id')->constrained('programs')->onDelete('cascade');
+            $table->string('class_type')->nullable();
+            $table->string('type')->default('new');
             $table->dateTime('enrolled_at')->nullable();
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
             $table->enum('status', ['pending', 'active', 'completed', 'rejected'])->default('pending');
             $table->timestamps();
-            
-            // Unique constraint to prevent duplicate enrollments
-            $table->unique(['user_id', 'program_id']);
         });
     }
 

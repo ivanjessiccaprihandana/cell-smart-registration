@@ -2,19 +2,29 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'program_id', 'enrolled_at', 'status'])]
 #[Table('program_enrollments')]
 
 class ProgramEnrollment extends Model
 {
+    protected $fillable = [
+        'user_id',
+        'program_id',
+        'class_type',
+        'type',
+        'enrolled_at',
+        'start_date',
+        'end_date',
+        'status',
+    ];
  
     protected $casts = [
         'enrolled_at' => 'datetime',
+        'start_date' => 'date',
+        'end_date' => 'date',
     ];
 
     /**
@@ -39,6 +49,16 @@ class ProgramEnrollment extends Model
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    public function scopeCurrent($query)
+    {
+        return $query
+            ->whereIn('status', ['pending', 'active'])
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', now()->toDateString());
+            });
     }
 
     /**

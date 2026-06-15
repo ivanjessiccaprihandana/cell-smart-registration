@@ -84,7 +84,7 @@
     <!-- Header -->
     <header class="sticky top-0 z-50 bg-surface/70 backdrop-blur-md border-b border-outline-variant/30 shadow-sm">
         <div class="flex justify-between items-center px-6 md:px-12 h-20 max-w-7xl mx-auto">
-            <div class="font-bold text-2xl text-primary">EduPremium</div>
+            <div class="font-bold text-2xl text-primary">Cell English Course & Bimbel</div>
             <div class="flex items-center gap-base">
                 <a href="{{ route('login') }}" class="px-5 py-2 rounded-lg text-primary font-label-md hover:bg-primary/5 transition-all hidden md:block">Login</a>
                 <a href="{{ route('register') }}" class="px-5 py-2 rounded-lg bg-primary-container text-on-primary font-label-md hover:bg-primary transition-all active:scale-95">Daftar Sekarang</a>

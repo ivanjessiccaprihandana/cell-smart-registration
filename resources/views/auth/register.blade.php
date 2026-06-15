@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'Register - EduPremium')
+@section('title', 'Register - Cell English Course & Bimbel')
 
 @section('content')
 <div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -12,7 +12,7 @@
                 Buat Akun Baru
             </h1>
             <p class="text-lg text-on-surface-variant max-w-md">
-                Daftar sekarang untuk mulai menggunakan layanan akademik EduPremium dengan mudah dan aman.
+                Daftar sekarang untuk mulai menggunakan layanan akademik Cell English Course & Bimbel dengan mudah dan aman.
             </p>
         </div>
 

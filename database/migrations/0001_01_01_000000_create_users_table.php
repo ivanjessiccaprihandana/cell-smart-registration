@@ -20,6 +20,9 @@ return new class extends Migration
             $table->string('whatsapp', 20)->nullable();
             $table->text('address')->nullable();
             $table->string('program')->nullable();
+            $table->string('class_type')->nullable();
+            $table->string('payment_proof_path')->nullable();
+            $table->string('payment_status')->default('belum_upload');
             $table->rememberToken();
             $table->timestamps();
         });

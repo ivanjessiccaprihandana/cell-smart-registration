@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'Login - EduPremium')
+@section('title', 'Login - Cell English Course')
 
 @section('content')
 <div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -8,7 +8,7 @@
     <div class="hidden lg:flex flex-col gap-6">
         <div class="space-y-3">
             <h1 class="text-4xl font-bold text-on-surface leading-tight">Selamat Datang Kembali</h1>
-            <p class="text-lg text-on-surface-variant max-w-md">Masukkan kredensial Anda untuk melanjutkan perjalanan akademik Anda bersama EduPremium.</p>
+            <p class="text-lg text-on-surface-variant max-w-md">Masukkan kredensial Anda untuk melanjutkan perjalanan akademik Anda bersama Cell English Course.</p>
         </div>
 
         <!-- Feature List -->
