@@ -91,10 +91,17 @@
                         </a>
                     @endif
 
-                    <a href="{{ route('programs.index') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600">
-                        <span class="material-symbols-outlined text-[18px]">edit</span>
-                        Ubah Program
-                    </a>
+                    @if($paymentStatus === 'diterima')
+                        <a href="{{ route('programs.invoice') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-5 text-sm font-bold text-emerald-700 hover:border-emerald-500 hover:bg-emerald-100">
+                            <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                            Cetak Invoice
+                        </a>
+                    @else
+                        <a href="{{ route('programs.index') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600">
+                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                            Ubah Program
+                        </a>
+                    @endif
                 </div>
 
                 @if($program)

@@ -166,10 +166,17 @@
                         <span class="material-symbols-outlined text-[20px]">{{ $primaryIcon }}</span>
                         {{ $primaryLabel }}
                     </a>
-                    <a href="{{ route('student.status') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 transition hover:border-indigo-500 hover:text-indigo-600">
-                        <span class="material-symbols-outlined text-[20px]">assignment_ind</span>
-                        Lihat Status Saya
-                    </a>
+                    @if($status === 'diterima')
+                        <a href="{{ route('programs.invoice') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-5 text-sm font-bold text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-100">
+                            <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+                            Cetak Invoice
+                        </a>
+                    @else
+                        <a href="{{ route('student.status') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 transition hover:border-indigo-500 hover:text-indigo-600">
+                            <span class="material-symbols-outlined text-[20px]">assignment_ind</span>
+                            Lihat Status Saya
+                        </a>
+                    @endif
                 </div>
             </div>
 

@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/programs/payment', [ProgramController::class, 'payment'])->name('programs.payment');
     Route::post('/programs/payment', [ProgramController::class, 'uploadPayment'])->name('programs.payment.store');
     Route::get('/programs/payment/success', [ProgramController::class, 'paymentSuccess'])->name('programs.payment.success');
+    Route::get('/programs/payment/invoice', [ProgramController::class, 'invoice'])->name('programs.invoice');
     Route::get('/programs/{program}', [ProgramController::class, 'show'])->name('programs.show');
     Route::post('/programs/{program}/join', [ProgramController::class, 'join'])->name('programs.join');
 

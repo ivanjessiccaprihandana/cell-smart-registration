@@ -385,6 +385,37 @@ public function store(Request $request)
         ]);
     }
 
+    public function invoice()
+    {
+        $user = Auth::user();
+
+        $program = $this->selectedProgramOrRedirect($user);
+        if ($program instanceof \Illuminate\Http\RedirectResponse) {
+            return $program;
+        }
+
+        if ($user->payment_status !== 'diterima') {
+            return redirect()
+                ->route('student.status')
+                ->withErrors(['invoice' => 'Invoice hanya bisa dicetak setelah pembayaran disetujui admin.']);
+        }
+
+        $latestEnrollment = ProgramEnrollment::query()
+            ->where('user_id', $user->id)
+            ->where('program_id', $program->id)
+            ->latest('end_date')
+            ->latest()
+            ->first();
+
+        return view('program.invoice', [
+            'auth' => $user,
+            'program' => $program,
+            'latestEnrollment' => $latestEnrollment,
+            'invoiceNumber' => 'INV-CELL-' . now()->format('Y') . '-' . str_pad((string) $user->id, 4, '0', STR_PAD_LEFT) . '-' . str_pad((string) $program->id, 3, '0', STR_PAD_LEFT),
+            'paidAt' => $user->updated_at ?? now(),
+        ]);
+    }
+
     private function selectedProgramOrRedirect(User $user): Program|\Illuminate\Http\RedirectResponse
     {
         if (!$user->program) {
