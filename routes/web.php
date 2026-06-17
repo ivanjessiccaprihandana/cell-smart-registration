@@ -37,12 +37,16 @@ Route::middleware('auth')->group(function () {
 
     Route::redirect('/admin', '/admin/dashboard')->name('admin.index');
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/admin/registrants', [AdminController::class, 'registrants'])->name('admin.registrants.index');
     Route::get('/admin/payments', [AdminController::class, 'payments'])->name('admin.payments.index');
     Route::patch('/admin/payments/{user}', [AdminController::class, 'updatePayment'])->name('admin.payments.update');
     Route::get('/admin/placement/results', [AdminController::class, 'placementResults'])->name('admin.placement.results');
     Route::get('/admin/schedules', [AdminController::class, 'schedules'])->name('admin.schedules.index');
     Route::get('/admin/schedules/create', [AdminController::class, 'createSchedule'])->name('admin.schedules.create');
     Route::post('/admin/schedules', [AdminController::class, 'storeSchedule'])->name('admin.schedules.store');
+    Route::get('/admin/schedules/{schedule}/edit', [AdminController::class, 'editSchedule'])->name('admin.schedules.edit');
+    Route::put('/admin/schedules/{schedule}', [AdminController::class, 'updateSchedule'])->name('admin.schedules.update');
+    Route::delete('/admin/schedules/{schedule}', [AdminController::class, 'destroySchedule'])->name('admin.schedules.destroy');
     Route::get('/admin/placement/questions', [AdminController::class, 'placementQuestions'])->name('admin.placement.questions.index');
     Route::get('/admin/placement/questions/create', [AdminController::class, 'createPlacementQuestion'])->name('admin.placement.questions.create');
     Route::post('/admin/placement/questions', [AdminController::class, 'storePlacementQuestion'])->name('admin.placement.questions.store');
@@ -55,6 +59,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/programs/{program}/edit', [AdminController::class, 'editProgram'])->name('admin.programs.edit');
     Route::put('/admin/programs/{program}', [AdminController::class, 'updateProgram'])->name('admin.programs.update');
     Route::delete('/admin/programs/{program}', [AdminController::class, 'destroyProgram'])->name('admin.programs.destroy');
+    Route::get('/admin/tutors', [AdminController::class, 'tutors'])->name('admin.tutors.index');
+    Route::get('/admin/tutors/create', [AdminController::class, 'createTutor'])->name('admin.tutors.create');
+    Route::post('/admin/tutors', [AdminController::class, 'storeTutor'])->name('admin.tutors.store');
+    Route::get('/admin/tutors/{tutor}/edit', [AdminController::class, 'editTutor'])->name('admin.tutors.edit');
+    Route::put('/admin/tutors/{tutor}', [AdminController::class, 'updateTutor'])->name('admin.tutors.update');
+    Route::delete('/admin/tutors/{tutor}', [AdminController::class, 'destroyTutor'])->name('admin.tutors.destroy');
     Route::get('/admin/program-categories', [AdminController::class, 'programCategoriesIndex'])->name('admin.program-categories.index');
     Route::get('/admin/program-categories/create', [AdminController::class, 'createProgramCategory'])->name('admin.program-categories.create');
     Route::post('/admin/program-categories', [AdminController::class, 'storeProgramCategory'])->name('admin.program-categories.store');

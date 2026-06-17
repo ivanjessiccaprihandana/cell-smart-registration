@@ -82,6 +82,7 @@
         'belum_upload' => 'Menunggu upload bukti',
         default => 'Menunggu verifikasi admin',
     };
+    $adminWhatsappUrl = 'https://wa.me/6281292538501?text=' . rawurlencode('Halo admin CELL English Course, saya butuh bantuan terkait pendaftaran/pembayaran.');
 @endphp
 
 <main class="min-h-[calc(100vh-4rem)] bg-slate-50">
@@ -177,7 +178,7 @@
                     <span class="material-symbols-outlined text-[20px] text-indigo-600">help</span>
                     <p>
                         Butuh bantuan?
-                        <a href="{{ route('home') }}#contact" class="font-bold text-indigo-700 hover:text-indigo-900">Hubungi support CELL English Course</a>
+                        <a href="{{ $adminWhatsappUrl }}" target="_blank" rel="noopener" class="font-bold text-emerald-700 hover:text-emerald-900">Hubungi support CELL English Course via WhatsApp</a>
                         agar proses pendaftaran Anda bisa dibantu lebih cepat.
                     </p>
                 </div>
@@ -201,7 +202,9 @@
             <div>
                 <h3 class="font-bold text-slate-950">Bantuan</h3>
                 <div class="mt-3 space-y-2 text-slate-500">
-                    <p>Hubungi Admin</p>
+                    <a href="{{ $adminWhatsappUrl }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 font-semibold text-emerald-700 hover:text-emerald-900">
+                        <span>WhatsApp Admin</span>
+                    </a>
                     <p>Verifikasi Pembayaran</p>
                 </div>
             </div>

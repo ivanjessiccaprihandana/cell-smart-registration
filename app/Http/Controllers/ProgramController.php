@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Program;
+use App\Models\ClassSchedule;
 use App\Models\ProgramEnrollment;
 use App\Models\PlacementTestAttempt;
 use App\Models\User;
@@ -75,6 +76,12 @@ class ProgramController extends Controller
             'auth' => $user,
             'program' => $program,
             'latestPlacementAttempt' => $latestPlacementAttempt,
+            'assignedSchedules' => ClassSchedule::with(['program', 'tutor'])
+                ->where('user_id', $user->id)
+                ->whereDate('class_date', '>=', now()->toDateString())
+                ->orderBy('class_date')
+                ->orderBy('start_time')
+                ->get(),
         ]);
     }
 

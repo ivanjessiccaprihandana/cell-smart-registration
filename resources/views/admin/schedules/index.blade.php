@@ -57,8 +57,14 @@
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
                                         <p class="text-sm font-extrabold">{{ $schedule->program->name }}</p>
+                                        @if($schedule->student)
+                                            <p class="mt-1 rounded-lg bg-white/70 px-2 py-1 text-xs font-extrabold">{{ $schedule->student->name }}</p>
+                                        @endif
                                         @if($schedule->class_type)
                                             <p class="mt-1 inline-flex rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-extrabold">{{ $schedule->class_type }}</p>
+                                        @endif
+                                        @if($schedule->tutor)
+                                            <p class="mt-1 text-xs font-bold opacity-80">Tutor: {{ $schedule->tutor->name }}</p>
                                         @endif
                                         <p class="mt-1 text-xs font-bold opacity-80">{{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }}</p>
                                     </div>
@@ -66,7 +72,7 @@
                                 </div>
                                 <p class="mt-2 text-xs font-semibold opacity-80">{{ $schedule->room ?: 'Ruang belum diisi' }}</p>
 
-                                @if($schedule->students->isNotEmpty())
+                                @if($schedule->students->isNotEmpty() && !$schedule->student)
                                     <div class="mt-3 space-y-1">
                                         @foreach($schedule->students->take(4) as $student)
                                             <p class="truncate rounded-lg bg-white/70 px-2 py-1 text-xs font-bold">{{ $student->name }}</p>
@@ -75,9 +81,24 @@
                                             <p class="px-2 text-xs font-bold opacity-70">+{{ $schedule->students->count() - 4 }} siswa lainnya</p>
                                         @endif
                                     </div>
-                                @else
+                                @elseif($schedule->students->isEmpty())
                                     <p class="mt-3 text-center text-xs font-semibold opacity-60">Belum ada siswa</p>
                                 @endif
+
+                                <div class="mt-3 flex gap-2">
+                                    <a href="{{ route('admin.schedules.edit', $schedule) }}" class="inline-flex h-8 flex-1 items-center justify-center gap-1 rounded-lg bg-white/80 text-xs font-extrabold hover:bg-white">
+                                        <span class="material-symbols-outlined text-[16px]">edit</span>
+                                        Edit
+                                    </a>
+                                    <form method="POST" action="{{ route('admin.schedules.destroy', $schedule) }}" class="flex-1" onsubmit="return confirm('Hapus jadwal ini?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="inline-flex h-8 w-full items-center justify-center gap-1 rounded-lg bg-white/80 text-xs font-extrabold text-rose-700 hover:bg-white">
+                                            <span class="material-symbols-outlined text-[16px]">delete</span>
+                                            Hapus
+                                        </button>
+                                    </form>
+                                </div>
                             </article>
                         @empty
                             <div class="flex h-24 items-center justify-center text-sm font-semibold text-slate-400">
@@ -101,10 +122,12 @@
                 <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Program</th>
+                        <th class="px-4 py-3">Siswa</th>
+                        <th class="px-4 py-3">Tutor</th>
                         <th class="px-4 py-3">Tanggal</th>
                         <th class="px-4 py-3">Jam</th>
-                        <th class="px-4 py-3">Siswa</th>
                         <th class="px-4 py-3">Ruang</th>
+                        <th class="px-4 py-3 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -116,17 +139,44 @@
                                     <p class="mt-1 inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{{ $schedule->class_type }}</p>
                                 @endif
                             </td>
+                            <td class="px-4 py-3">
+                                @if($schedule->student)
+                                    <p class="font-bold text-slate-950">{{ $schedule->student->name }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ $schedule->student->email }}</p>
+                                @else
+                                    <p class="font-bold text-indigo-700">{{ $schedule->students->count() }} siswa</p>
+                                    <p class="mt-1 max-w-xs truncate text-xs text-slate-500">{{ $schedule->students->pluck('name')->join(', ') ?: 'Belum ada siswa' }}</p>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                @if($schedule->tutor)
+                                    <p class="font-bold text-slate-950">{{ $schedule->tutor->name }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ $schedule->tutor->level ?: 'Semua level' }}</p>
+                                @else
+                                    <span class="text-sm font-semibold text-slate-400">Belum dipilih</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-slate-600">{{ $schedule->class_date->format('d M Y') }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }}</td>
-                            <td class="px-4 py-3">
-                                <p class="font-bold text-indigo-700">{{ $schedule->students->count() }} siswa</p>
-                                <p class="mt-1 max-w-xs truncate text-xs text-slate-500">{{ $schedule->students->pluck('name')->join(', ') ?: 'Belum ada siswa' }}</p>
-                            </td>
                             <td class="px-4 py-3 text-slate-700">{{ $schedule->room ?: '-' }}</td>
+                            <td class="px-4 py-3">
+                                <div class="flex justify-end gap-2">
+                                    <a href="{{ route('admin.schedules.edit', $schedule) }}" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-600 hover:text-indigo-600" aria-label="Edit jadwal">
+                                        <span class="material-symbols-outlined text-[18px]">edit</span>
+                                    </a>
+                                    <form method="POST" action="{{ route('admin.schedules.destroy', $schedule) }}" onsubmit="return confirm('Hapus jadwal ini?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-rose-500 hover:text-rose-600" aria-label="Hapus jadwal">
+                                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-10 text-center text-sm font-semibold text-slate-500">Belum ada jadwal program pada minggu ini.</td>
+                            <td colspan="7" class="px-4 py-10 text-center text-sm font-semibold text-slate-500">Belum ada jadwal program pada minggu ini.</td>
                         </tr>
                     @endforelse
                 </tbody>

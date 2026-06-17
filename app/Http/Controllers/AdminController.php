@@ -8,6 +8,7 @@ use App\Models\PlacementQuestion;
 use App\Models\PlacementTestAttempt;
 use App\Models\ProgramCategory;
 use App\Models\ProgramEnrollment;
+use App\Models\Tutor;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -68,7 +69,6 @@ class AdminController extends Controller
             'programLabels' => $programLabels,
             'programs' => $programs,
             'registeredUsers' => $registeredUsers,
-            'recentRegistrants' => $registeredUsers->take(8),
             'programCounts' => $programCounts,
             'paymentCounts' => $paymentCounts,
             'weeklyRegistrants' => $weeklyRegistrants,
@@ -86,6 +86,77 @@ class AdminController extends Controller
                     ->filter(fn (User $user) => $user->updated_at?->isToday())
                     ->count(),
             ],
+        ]);
+    }
+
+    public function registrants(Request $request)
+    {
+        $programs = Program::query()
+            ->orderBy('name')
+            ->get();
+
+        $programLabels = $programs
+            ->pluck('name', 'id')
+            ->mapWithKeys(fn ($name, $id) => [(string) $id => $name])
+            ->all();
+
+        $selectedProgram = $request->query('program');
+        $selectedClassType = $request->query('class_type');
+        $validProgramIds = $programs
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->all();
+        $validClassTypes = array_keys($this->classTypes());
+        $selectedProgram = in_array((string) $selectedProgram, $validProgramIds, true) ? (string) $selectedProgram : null;
+        $selectedClassType = in_array($selectedClassType, $validClassTypes, true) ? $selectedClassType : null;
+
+        $registrants = User::query()
+            ->whereNotNull('program')
+            ->when($selectedProgram, function ($query) use ($selectedProgram) {
+                $query->where('program', $selectedProgram);
+            })
+            ->when($selectedClassType, function ($query) use ($selectedClassType) {
+                $query->where('class_type', $selectedClassType);
+            })
+            ->latest()
+            ->get();
+
+        $groupedRegistrants = $registrants
+            ->groupBy(fn (User $user) => (string) $user->program)
+            ->sortBy(fn ($users, $programId) => $programLabels[$programId] ?? $programId);
+
+        $programSummaries = $programs
+            ->map(function (Program $program) use ($programLabels, $selectedClassType) {
+                $students = User::query()
+                    ->where('program', (string) $program->id)
+                    ->when($selectedClassType, function ($query) use ($selectedClassType) {
+                        $query->where('class_type', $selectedClassType);
+                    })
+                    ->get();
+
+                return [
+                    'id' => (string) $program->id,
+                    'name' => $programLabels[(string) $program->id] ?? $program->name,
+                    'total' => $students->count(),
+                    'accepted' => $students->where('payment_status', 'diterima')->count(),
+                    'pending' => $students->where('payment_status', 'menunggu_verifikasi')->count(),
+                ];
+            })
+            ->filter(fn (array $summary) => $summary['total'] > 0)
+            ->sortByDesc('total')
+            ->values();
+
+        return view('admin.registrants.index', [
+            'title' => 'Data Pendaftar',
+            'registrants' => $registrants,
+            'groupedRegistrants' => $groupedRegistrants,
+            'programs' => $programs,
+            'programLabels' => $programLabels,
+            'programSummaries' => $programSummaries,
+            'selectedProgram' => $selectedProgram,
+            'selectedClassType' => $selectedClassType,
+            'classTypes' => $this->classTypes(),
+            'paymentLabels' => $this->paymentStatuses(),
         ]);
     }
 
@@ -107,6 +178,69 @@ class AdminController extends Controller
             'title' => 'Kelola Program',
             'programs' => $programs,
         ]);
+    }
+
+    public function tutors()
+    {
+        $tutors = Tutor::with('program')
+            ->withCount('classSchedules')
+            ->orderBy('name')
+            ->paginate(12);
+
+        return view('admin.tutors.index', [
+            'title' => 'Kelola Tutor',
+            'tutors' => $tutors,
+        ]);
+    }
+
+    public function createTutor()
+    {
+        return view('admin.tutors.create', [
+            'title' => 'Tambah Tutor',
+            ...$this->tutorFormData(),
+        ]);
+    }
+
+    public function storeTutor(Request $request)
+    {
+        Tutor::create($this->validateTutor($request));
+
+        return redirect()
+            ->route('admin.tutors.index')
+            ->with('success', 'Tutor berhasil ditambahkan.');
+    }
+
+    public function editTutor(Tutor $tutor)
+    {
+        return view('admin.tutors.edit', [
+            'title' => 'Edit Tutor',
+            'tutor' => $tutor,
+            ...$this->tutorFormData(),
+        ]);
+    }
+
+    public function updateTutor(Request $request, Tutor $tutor)
+    {
+        $tutor->update($this->validateTutor($request));
+
+        return redirect()
+            ->route('admin.tutors.index')
+            ->with('success', 'Tutor berhasil diperbarui.');
+    }
+
+    public function destroyTutor(Tutor $tutor)
+    {
+        if ($tutor->classSchedules()->exists()) {
+            return redirect()
+                ->route('admin.tutors.index')
+                ->withErrors(['tutor' => 'Tutor tidak bisa dihapus karena sudah dipakai pada jadwal kelas.']);
+        }
+
+        $tutor->delete();
+
+        return redirect()
+            ->route('admin.tutors.index')
+            ->with('success', 'Tutor berhasil dihapus.');
     }
 
     public function payments(Request $request)
@@ -194,20 +328,22 @@ class AdminController extends Controller
             ];
         });
 
-        $schedules = ClassSchedule::with('program')
+        $schedules = ClassSchedule::with(['program', 'student', 'tutor'])
             ->whereBetween('class_date', [$weekStart->toDateString(), $weekStart->copy()->addDays(6)->toDateString()])
             ->orderBy('class_date')
             ->orderBy('start_time')
             ->get()
             ->map(function (ClassSchedule $schedule) {
-                $schedule->students = User::query()
-                    ->where('program', (string) $schedule->program_id)
-                    ->when($schedule->class_type, function ($query) use ($schedule) {
-                        $query->where('class_type', $schedule->class_type);
-                    })
-                    ->where('payment_status', 'diterima')
-                    ->orderBy('name')
-                    ->get();
+                $schedule->students = $schedule->student
+                    ? collect([$schedule->student])
+                    : User::query()
+                        ->where('program', (string) $schedule->program_id)
+                        ->when($schedule->class_type, function ($query) use ($schedule) {
+                            $query->where('class_type', $schedule->class_type);
+                        })
+                        ->where('payment_status', 'diterima')
+                        ->orderBy('name')
+                        ->get();
 
                 return $schedule;
             });
@@ -227,15 +363,57 @@ class AdminController extends Controller
     {
         return view('admin.schedules.create', [
             'title' => 'Tambah Jadwal Kelas',
-            'programs' => Program::where('status', 'active')->orderBy('name')->get(),
-            'classTypes' => $this->classTypes(),
-            'programsWithClassType' => $this->programsWithClassType(),
+            ...$this->scheduleFormData(),
         ]);
     }
 
     public function storeSchedule(Request $request)
     {
+        $validated = $this->validateSchedule($request);
+
+        ClassSchedule::create($this->schedulePayload($validated));
+
+        return redirect()
+            ->route('admin.schedules.index', ['week' => \Illuminate\Support\Carbon::parse($validated['class_date'])->startOfWeek()->toDateString()])
+            ->with('success', 'Jadwal kelas berhasil ditambahkan.');
+    }
+
+    public function editSchedule(ClassSchedule $schedule)
+    {
+        return view('admin.schedules.edit', [
+            'title' => 'Edit Jadwal Kelas',
+            'schedule' => $schedule->load(['student.latestPlacementAttempt', 'tutor']),
+            ...$this->scheduleFormData(),
+        ]);
+    }
+
+    public function updateSchedule(Request $request, ClassSchedule $schedule)
+    {
+        $validated = $this->validateSchedule($request);
+
+        $schedule->update($this->schedulePayload($validated));
+
+        return redirect()
+            ->route('admin.schedules.index', ['week' => \Illuminate\Support\Carbon::parse($validated['class_date'])->startOfWeek()->toDateString()])
+            ->with('success', 'Jadwal kelas berhasil diperbarui.');
+    }
+
+    public function destroySchedule(ClassSchedule $schedule)
+    {
+        $week = $schedule->class_date?->copy()->startOfWeek()->toDateString() ?? now()->startOfWeek()->toDateString();
+
+        $schedule->delete();
+
+        return redirect()
+            ->route('admin.schedules.index', ['week' => $week])
+            ->with('success', 'Jadwal kelas berhasil dihapus.');
+    }
+
+    private function validateSchedule(Request $request): array
+    {
         $validated = $request->validate([
+            'user_id' => ['required', Rule::exists('users', 'id')],
+            'tutor_id' => ['nullable', Rule::exists('tutors', 'id')],
             'program_id' => ['required', Rule::exists('programs', 'id')],
             'class_type' => ['nullable', Rule::in(array_keys($this->classTypes()))],
             'class_date' => ['required', 'date'],
@@ -246,24 +424,110 @@ class AdminController extends Controller
         ]);
 
         $program = Program::findOrFail($validated['program_id']);
+        $student = User::with('latestPlacementAttempt')->findOrFail($validated['user_id']);
         $classType = in_array($program->name, $this->programsWithClassType(), true)
             ? ($validated['class_type'] ?? 'Reguler')
             : null;
 
-        ClassSchedule::create([
+        if ((string) $student->program !== (string) $program->id) {
+            throw ValidationException::withMessages([
+                'user_id' => 'Siswa ini tidak terdaftar pada program yang dipilih.',
+            ]);
+        }
+
+        if ($classType && $student->class_type !== $classType) {
+            throw ValidationException::withMessages([
+                'class_type' => 'Jenis kelas tidak sesuai dengan jenis kelas yang diambil siswa.',
+            ]);
+        }
+
+        if (!empty($validated['tutor_id'])) {
+            $tutor = Tutor::findOrFail($validated['tutor_id']);
+            $studentLevel = $student->latestPlacementAttempt?->level;
+
+            if (!$tutor->is_active) {
+                throw ValidationException::withMessages([
+                    'tutor_id' => 'Tutor yang dipilih sedang nonaktif.',
+                ]);
+            }
+
+            if ($tutor->program_id && (string) $tutor->program_id !== (string) $program->id) {
+                throw ValidationException::withMessages([
+                    'tutor_id' => 'Tutor tidak sesuai dengan program yang dipilih.',
+                ]);
+            }
+
+            if ($tutor->level && $studentLevel && $tutor->level !== $studentLevel) {
+                throw ValidationException::withMessages([
+                    'tutor_id' => 'Tutor tidak sesuai dengan level placement test siswa.',
+                ]);
+            }
+        }
+
+        $validated['class_type'] = $classType;
+
+        return $validated;
+    }
+
+    private function schedulePayload(array $validated): array
+    {
+        return [
+            'user_id' => $validated['user_id'],
+            'tutor_id' => $validated['tutor_id'] ?? null,
             'program_id' => $validated['program_id'],
-            'class_type' => $classType,
+            'class_type' => $validated['class_type'],
             'class_date' => $validated['class_date'],
             'session_name' => 'Kelas Manual',
             'start_time' => $validated['start_time'],
             'end_time' => $validated['end_time'],
             'room' => $validated['room'] ?? null,
             'notes' => $validated['notes'] ?? null,
+        ];
+    }
+
+    private function scheduleFormData(): array
+    {
+        return [
+            'programs' => Program::where('status', 'active')->orderBy('name')->get(),
+            'students' => User::query()
+                ->with('latestPlacementAttempt')
+                ->whereNotNull('program')
+                ->orderBy('name')
+                ->get(),
+            'tutors' => Tutor::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(),
+            'classTypes' => $this->classTypes(),
+            'programsWithClassType' => $this->programsWithClassType(),
+        ];
+    }
+
+    private function validateTutor(Request $request): array
+    {
+        $validated = $request->validate([
+            'program_id' => ['nullable', Rule::exists('programs', 'id')],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'level' => ['nullable', Rule::in(array_keys($this->placementLevels()))],
+            'notes' => ['nullable', 'string'],
+            'is_active' => ['nullable', 'boolean'],
         ]);
 
-        return redirect()
-            ->route('admin.schedules.index', ['week' => \Illuminate\Support\Carbon::parse($validated['class_date'])->startOfWeek()->toDateString()])
-            ->with('success', 'Jadwal kelas berhasil ditambahkan.');
+        $validated['program_id'] = $validated['program_id'] ?? null;
+        $validated['level'] = $validated['level'] ?? null;
+        $validated['is_active'] = $request->boolean('is_active');
+
+        return $validated;
+    }
+
+    private function tutorFormData(): array
+    {
+        return [
+            'programs' => Program::where('status', 'active')->orderBy('name')->get(),
+            'levels' => $this->placementLevels(),
+        ];
     }
 
     public function placementQuestions()

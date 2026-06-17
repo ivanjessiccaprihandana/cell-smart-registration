@@ -21,7 +21,7 @@
                     <span class="material-symbols-outlined text-[20px]">dashboard</span>
                     Dashboard
                 </a>
-                <a href="{{ route('admin.dashboard') }}#pendaftar" class="flex items-center gap-3 rounded-xl px-4 py-3 hover:bg-slate-100 hover:text-slate-900">
+                <a href="{{ route('admin.registrants.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.registrants.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">group</span>
                     Pendaftar
                 </a>
@@ -32,6 +32,10 @@
                 <a href="{{ route('admin.programs.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.programs.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">school</span>
                     Program
+                </a>
+                <a href="{{ route('admin.tutors.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.tutors.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
+                    <span class="material-symbols-outlined text-[20px]">person_book</span>
+                    Tutor
                 </a>
                 <a href="{{ route('admin.program-categories.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.program-categories.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">category</span>
@@ -76,7 +80,7 @@
                                     <span class="material-symbols-outlined text-[20px]">dashboard</span>
                                     Dashboard
                                 </a>
-                                <a href="{{ route('admin.dashboard') }}#pendaftar" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+                                <a href="{{ route('admin.registrants.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.registrants.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">group</span>
                                     Pendaftar
                                 </a>
@@ -87,6 +91,10 @@
                                 <a href="{{ route('admin.programs.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.programs.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">school</span>
                                     Program
+                                </a>
+                                <a href="{{ route('admin.tutors.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.tutors.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
+                                    <span class="material-symbols-outlined text-[20px]">person_book</span>
+                                    Tutor
                                 </a>
                                 <a href="{{ route('admin.program-categories.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.program-categories.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">category</span>
