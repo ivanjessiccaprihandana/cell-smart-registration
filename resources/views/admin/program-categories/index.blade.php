@@ -12,10 +12,7 @@
             <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Kategori Tampilan</h2>
             <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Kelola kategori dan sub-kategori yang muncul di pilihan Kategori Tampilan saat membuat program.</p>
         </div>
-        <a href="{{ route('admin.program-categories.create') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
-            <span class="material-symbols-outlined text-[20px]">add</span>
-            Tambah Kategori
-        </a>
+   
     </section>
 
     @if(session('success'))
@@ -37,10 +34,10 @@
                     <h3 class="text-lg font-bold text-slate-900">Daftar Kategori</h3>
                     <p class="text-sm text-slate-500">Total {{ $categories->total() }} kategori tersimpan.</p>
                 </div>
-                <a href="{{ route('admin.programs.create') }}" class="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700">
-                    <span class="material-symbols-outlined text-[18px]">school</span>
-                    Tambah Program
-                </a>
+                     <a href="{{ route('admin.program-categories.create') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
+            <span class="material-symbols-outlined text-[20px]">add</span>
+            Tambah Kategori
+        </a>
             </div>
         </div>
 
