@@ -10,6 +10,8 @@ class ClassSchedule extends Model
     protected $fillable = [
         'user_id',
         'tutor_id',
+        'schedule_template_id',
+        'class_room_id',
         'program_id',
         'class_type',
         'class_date',
@@ -17,6 +19,7 @@ class ClassSchedule extends Model
         'start_time',
         'end_time',
         'room',
+        'max_students',
         'notes',
     ];
 
@@ -24,6 +27,7 @@ class ClassSchedule extends Model
         'class_date' => 'date',
         'start_time' => 'datetime:H:i',
         'end_time' => 'datetime:H:i',
+        'max_students' => 'integer',
     ];
 
     public function program(): BelongsTo
@@ -39,5 +43,15 @@ class ClassSchedule extends Model
     public function tutor(): BelongsTo
     {
         return $this->belongsTo(Tutor::class);
+    }
+
+    public function scheduleTemplate(): BelongsTo
+    {
+        return $this->belongsTo(ScheduleTemplate::class);
+    }
+
+    public function classRoom(): BelongsTo
+    {
+        return $this->belongsTo(ClassRoom::class);
     }
 }

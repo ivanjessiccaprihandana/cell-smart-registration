@@ -23,13 +23,24 @@
     };
     $proofUrl = $auth->payment_proof_path ? \Illuminate\Support\Facades\Storage::url($auth->payment_proof_path) : null;
     $priceText = $program->formattedPriceForClassType($auth->class_type, 'Hubungi Admin');
-    $programPerks = [
-        'BIMBEL' => ['Pendampingan tugas sekolah', 'Latihan soal sesuai jenjang', 'Monitoring perkembangan siswa'],
-        'Test Preparation' => ['Simulasi tes terarah', 'Strategi pengerjaan soal', 'Pembahasan hasil latihan'],
-        'Private' => ['Pendampingan personal', 'Materi sesuai kebutuhan siswa', 'Jadwal dikonsultasikan bersama admin'],
-        'Bahasa Inggris' => ['Latihan percakapan aktif', 'Materi sesuai level siswa', 'Tutor berpengalaman'],
-    ];
-    $selectedPerks = $programPerks[$program->category] ?? ['Kelas terarah', 'Materi mudah diikuti', 'Pendampingan tutor'];
+    $requiresPlacementTest = !(
+        \Illuminate\Support\Str::lower($program->category ?? '') === 'bimbel'
+        || \Illuminate\Support\Str::startsWith(\Illuminate\Support\Str::lower($program->name), 'bimbel')
+    );
+    $nextStepText = $requiresPlacementTest
+        ? 'Setelah pembayaran disetujui, placement test akan terbuka.'
+        : 'Setelah pembayaran disetujui, Anda bisa langsung konsultasi jadwal.';
+    $statusBadgeClass = match ($paymentStatus) {
+        'diterima' => 'bg-emerald-100 text-emerald-700',
+        'ditolak' => 'bg-rose-100 text-rose-700',
+        'menunggu_verifikasi' => 'bg-amber-100 text-amber-700',
+        default => 'bg-slate-100 text-slate-700',
+    };
+    $canChangeProgramBeforePayment = !$auth->payment_proof_path && $paymentStatus === 'belum_upload';
+    $adminWhatsappUrl = 'https://wa.me/6281292538501';
+    $paymentDeadline = $paymentStatus === 'belum_upload' && $auth->registration_expires_at
+        ? $auth->registration_expires_at->format('d M Y H:i')
+        : null;
 @endphp
 
 <style>
@@ -37,13 +48,6 @@
         border-color: #4f46e5;
         background: #eef2ff;
         transform: translateY(-2px);
-    }
-    .program-preview-board {
-        background:
-            linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px),
-            linear-gradient(0deg, rgba(255,255,255,.08) 1px, transparent 1px),
-            linear-gradient(135deg, #0f3b45, #08232d);
-        background-size: 18px 18px, 18px 18px, auto;
     }
 </style>
 
@@ -87,60 +91,63 @@
             </div>
         @endif
 
-        <div class="grid gap-6 lg:grid-cols-[1fr_0.72fr]">
+        <section class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-100 px-6 py-5">
+                <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">Ringkasan Pembayaran</p>
+                        <h2 class="mt-2 text-2xl font-extrabold text-slate-950">{{ $program->name }}</h2>
+                    </div>
+                    <span class="inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold {{ $statusBadgeClass }}">{{ $statusLabel }}</span>
+                </div>
+            </div>
+
+            <div class="grid gap-0 md:grid-cols-4">
+                <div class="border-b border-slate-100 px-6 py-5 md:border-b-0 md:border-r">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Siswa</p>
+                    <p class="mt-2 text-sm font-extrabold text-slate-950">{{ $auth->name }}</p>
+                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ $auth->whatsapp ?: '-' }}</p>
+                </div>
+
+                <div class="border-b border-slate-100 px-6 py-5 md:border-b-0 md:border-r">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Kategori</p>
+                    <p class="mt-2 text-sm font-extrabold text-slate-950">{{ $program->category ?: '-' }}</p>
+                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ $auth->class_type ?: 'Reguler' }}</p>
+                </div>
+
+                <div class="border-b border-slate-100 px-6 py-5 md:border-b-0 md:border-r">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Tahap Berikutnya</p>
+                    <p class="mt-2 text-sm font-extrabold text-slate-950">{{ $requiresPlacementTest ? 'Placement Test' : 'Konsultasi Jadwal' }}</p>
+                    <p class="mt-1 text-xs font-semibold text-slate-500">Setelah disetujui admin</p>
+                </div>
+
+                <div class="bg-indigo-50 px-6 py-5">
+                    <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">Total Biaya</p>
+                    <p class="mt-2 text-2xl font-extrabold text-indigo-700">{{ $priceText }}</p>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-100 px-6 py-4">
+                <p class="text-sm font-semibold leading-6 text-slate-600">{{ $statusHint }} {{ $nextStepText }}</p>
+                @if($paymentDeadline)
+                    <p class="mt-2 text-sm font-extrabold text-rose-600">Batas upload bukti: {{ $paymentDeadline }}</p>
+                @endif
+            </div>
+        </section>
+
+        <div class="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
             <div class="space-y-6">
                 <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div class="grid gap-5 md:grid-cols-[0.95fr_1.05fr] md:items-center">
-                        <div class="overflow-hidden rounded-xl border border-slate-200 bg-slate-950 p-3 shadow-sm">
-                            <div class="program-preview-board relative flex aspect-[4/2.35] items-center justify-center overflow-hidden rounded-lg">
-                                <div class="absolute left-4 bottom-4 h-12 w-8 rounded-full border border-emerald-200/60"></div>
-                                <div class="absolute right-5 bottom-4 h-14 w-10 rounded-full border border-emerald-200/60"></div>
-                                <div class="grid w-3/4 gap-2 text-[8px] font-semibold uppercase tracking-widest text-cyan-100/80">
-                                    <div class="h-2 rounded-full bg-cyan-100/50"></div>
-                                    <div class="grid grid-cols-3 gap-2">
-                                        <span class="h-2 rounded-full bg-cyan-100/25"></span>
-                                        <span class="h-2 rounded-full bg-cyan-100/40"></span>
-                                        <span class="h-2 rounded-full bg-cyan-100/20"></span>
-                                    </div>
-                                    <div class="grid grid-cols-4 gap-2">
-                                        <span class="h-2 rounded-full bg-cyan-100/35"></span>
-                                        <span class="h-2 rounded-full bg-cyan-100/20"></span>
-                                        <span class="h-2 rounded-full bg-cyan-100/45"></span>
-                                        <span class="h-2 rounded-full bg-cyan-100/25"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
+                    <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">Pilihan Program</p>
-                            <h2 class="mt-2 text-2xl font-bold text-slate-950">{{ $program->name }}</h2>
-                            @if($auth->class_type)
-                                <p class="mt-2 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{{ $auth->class_type }}</p>
-                            @endif
-                            <p class="mt-3 text-sm leading-6 text-slate-600">{{ $program->description }}</p>
-
-                            <div class="mt-5 space-y-2 border-t border-slate-100 pt-4">
-                                @foreach($selectedPerks as $perk)
-                                    <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                        <span class="material-symbols-outlined text-[18px] text-indigo-600">check_circle</span>
-                                        {{ $perk }}
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="mt-5 flex items-center justify-between rounded-xl bg-indigo-50 px-4 py-3">
-                                <span class="text-xs font-bold text-indigo-500">Total Biaya</span>
-                                <span class="text-xl font-extrabold text-indigo-700">{{ $priceText }}</span>
-                            </div>
+                            <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">Langkah 1</p>
+                            <h2 class="mt-1 text-lg font-bold text-slate-950">Pilih Metode Pembayaran</h2>
+                            <p class="mt-1 text-sm font-semibold text-slate-500">Gunakan salah satu metode berikut.</p>
                         </div>
+                        <span class="material-symbols-outlined text-slate-300">payments</span>
                     </div>
-                </section>
 
-                <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 class="text-lg font-bold text-slate-950">Pilih Metode Pembayaran</h2>
-
-                    <div class="mt-5 grid gap-4 md:grid-cols-2">
+                    <div class="mt-5 grid gap-4">
                         <div class="rounded-xl border-2 border-indigo-500 bg-indigo-50/40 p-4">
                             <div class="flex items-center justify-between text-sm font-bold text-indigo-700">
                                 <span>QRIS</span>
@@ -186,9 +193,18 @@
                         </div>
                     </div>
                 </section>
+            </div>
 
+            <div class="space-y-6">
                 <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 class="text-lg font-bold text-slate-950">Unggah Bukti Transfer</h2>
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">Langkah 2</p>
+                            <h2 class="mt-1 text-lg font-bold text-slate-950">Unggah Bukti Pembayaran</h2>
+                            <p class="mt-1 text-sm font-semibold text-slate-500">Upload bukti setelah transfer atau scan QRIS.</p>
+                        </div>
+                        <span class="material-symbols-outlined text-slate-300">upload_file</span>
+                    </div>
 
                     <form method="POST" action="{{ route('programs.payment.store') }}" enctype="multipart/form-data" class="mt-5 space-y-5">
                         @csrf
@@ -219,15 +235,15 @@
                             </div>
                         </div>
 
-                        <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                             <div class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-[20px] text-indigo-600">info</span>
-                                <div class="text-xs font-medium leading-5 text-indigo-900">
+                                <span class="material-symbols-outlined text-[20px] text-slate-500">info</span>
+                                <div class="text-xs font-medium leading-5 text-slate-600">
                                     <p class="font-bold">Catatan Penting:</p>
                                     <ul class="mt-1 list-disc pl-4">
                                         <li>Verifikasi pembayaran dilakukan admin maksimal 1x24 jam hari kerja.</li>
                                         <li>Pastikan nominal transfer sesuai arahan admin.</li>
-                                        <li>Placement test akan terbuka setelah pembayaran disetujui admin.</li>
+                                        <li>{{ $nextStepText }}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -239,57 +255,33 @@
                         </button>
                     </form>
                 </section>
-            </div>
 
-            <aside class="space-y-6">
                 <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 class="text-lg font-bold text-slate-950">Ringkasan Pendaftaran</h2>
-                    <div class="mt-5 space-y-4">
-                        <div class="rounded-xl border px-4 py-3 text-sm font-bold {{ $statusHintClass }}">
-                            {{ $statusHint }}
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                            <span class="material-symbols-outlined text-[20px]">{{ $canChangeProgramBeforePayment ? 'edit' : 'support_agent' }}</span>
                         </div>
-                        <div class="rounded-xl bg-slate-50 p-4">
-                            <p class="text-xs font-semibold text-slate-500">Program Dipilih</p>
-                            <p class="mt-1 text-xl font-bold text-slate-950">{{ $program->name }}</p>
-                            <p class="mt-1 text-sm font-semibold text-indigo-600">{{ $program->category }}</p>
-                            @if($auth->class_type)
-                                <p class="mt-2 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{{ $auth->class_type }}</p>
-                            @endif
-                        </div>
-                        <div class="rounded-xl bg-indigo-50 p-4">
-                            <p class="text-xs font-semibold text-indigo-500">Total Biaya</p>
-                            <p class="mt-1 text-xl font-extrabold text-indigo-700">{{ $priceText }}</p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="rounded-xl bg-slate-50 p-4">
-                                <p class="text-xs font-semibold text-slate-500">Nama</p>
-                                <p class="mt-1 truncate text-sm font-bold text-slate-950">{{ $auth->name }}</p>
-                            </div>
-                            <div class="rounded-xl bg-slate-50 p-4">
-                                <p class="text-xs font-semibold text-slate-500">Status</p>
-                                <p class="mt-1 text-sm font-bold text-indigo-600">{{ $statusLabel }}</p>
-                            </div>
-                        </div>
-                        <div class="rounded-xl bg-slate-50 p-4">
-                            <p class="text-xs font-semibold text-slate-500">WhatsApp</p>
-                            <p class="mt-1 text-sm font-bold text-slate-950">{{ $auth->whatsapp ?: '-' }}</p>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-950">{{ $canChangeProgramBeforePayment ? 'Program belum sesuai?' : 'Perlu ubah program?' }}</h2>
+                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                                {{ $canChangeProgramBeforePayment
+                                    ? 'Kembali ke halaman pilihan program jika perlu mengganti program, jenis kelas, atau jadwal belajar.'
+                                    : 'Bukti pembayaran sudah dikirim. Hubungi admin agar perubahan data tetap rapi.' }}
+                            </p>
                         </div>
                     </div>
+                    @if($canChangeProgramBeforePayment)
+                        <a href="{{ route('programs.change') }}" class="mt-5 inline-flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:border-indigo-600 hover:text-indigo-600">
+                            Ubah Program
+                        </a>
+                    @else
+                        <a href="{{ $adminWhatsappUrl }}" target="_blank" rel="noopener" class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 hover:border-emerald-500 hover:bg-emerald-100">
+                            <span class="material-symbols-outlined text-[20px]">chat</span>
+                            Hubungi Admin
+                        </a>
+                    @endif
                 </section>
-
-                <section class="rounded-2xl border border-indigo-100 bg-indigo-600 p-6 text-white shadow-xl shadow-indigo-600/20">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
-                        <span class="material-symbols-outlined">verified</span>
-                    </div>
-                    <h2 class="mt-5 text-xl font-bold">Hampir selesai</h2>
-                    <p class="mt-2 text-sm leading-6 text-indigo-100">
-                        Setelah bukti pembayaran dikirim, admin akan mengecek pembayaran. Placement test akan muncul setelah pembayaran disetujui.
-                    </p>
-                    <a href="{{ route('programs.index') }}" class="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-white px-5 py-3 text-sm font-bold text-indigo-700 hover:bg-indigo-50">
-                        Ubah Program
-                    </a>
-                </section>
-            </aside>
+            </div>
         </div>
     </div>
 </main>

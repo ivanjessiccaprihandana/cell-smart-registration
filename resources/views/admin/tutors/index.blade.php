@@ -8,7 +8,7 @@
         <div>
             <p class="text-sm font-semibold text-indigo-600">Manajemen Tutor</p>
             <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Tutor</h2>
-            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Kelola tutor berdasarkan program dan level agar mudah dipilih saat membuat jadwal kelas.</p>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Kelola tutor berdasarkan program dan level agar mudah dipilih saat membuat jadwal siswa.</p>
         </div>
         <a href="{{ route('admin.tutors.create') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
             <span class="material-symbols-outlined text-[20px]">add</span>

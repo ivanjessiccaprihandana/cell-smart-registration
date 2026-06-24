@@ -30,6 +30,12 @@
         </div>
     @endif
 
+    @if($errors->any())
+        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('admin.payments.index') }}" class="inline-flex items-center rounded-lg px-4 py-2 text-sm font-bold {{ !$selectedStatus ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}">
@@ -99,26 +105,49 @@
                             </td>
                             <td class="px-6 py-4 text-slate-500">{{ $user->updated_at?->format('d M Y H:i') }}</td>
                             <td class="px-6 py-4">
-                                <div class="flex justify-end gap-2">
-                                    <form method="POST" action="{{ route('admin.payments.update', $user) }}">
-                                        @csrf
-                                        @method('PATCH')
-                                        <input type="hidden" name="payment_status" value="diterima">
-                                        <button type="submit" class="inline-flex h-9 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700" @disabled(!$user->payment_proof_path)>
-                                            <span class="material-symbols-outlined text-[16px]">check</span>
-                                            Terima
-                                        </button>
-                                    </form>
-                                    <form method="POST" action="{{ route('admin.payments.update', $user) }}">
-                                        @csrf
-                                        @method('PATCH')
-                                        <input type="hidden" name="payment_status" value="ditolak">
-                                        <button type="submit" class="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-rose-200 px-3 text-xs font-bold text-rose-700 hover:border-rose-500 hover:bg-rose-50" @disabled(!$user->payment_proof_path)>
-                                            <span class="material-symbols-outlined text-[16px]">close</span>
-                                            Tolak
-                                        </button>
-                                    </form>
-                                </div>
+                                @if($status === 'menunggu_verifikasi' && $user->payment_proof_path)
+                                    <div class="flex justify-end gap-2">
+                                        <form method="POST" action="{{ route('admin.payments.update', $user) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="payment_status" value="diterima">
+                                            <button type="submit" class="inline-flex h-9 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700">
+                                                <span class="material-symbols-outlined text-[16px]">check</span>
+                                                Terima
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ route('admin.payments.update', $user) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="payment_status" value="ditolak">
+                                            <button type="submit" class="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-rose-200 px-3 text-xs font-bold text-rose-700 hover:border-rose-500 hover:bg-rose-50">
+                                                <span class="material-symbols-outlined text-[16px]">close</span>
+                                                Tolak
+                                            </button>
+                                        </form>
+                                    </div>
+                                @elseif($status === 'diterima')
+                                    <div class="flex justify-end">
+                                        <span class="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+                                            <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                                            Selesai
+                                        </span>
+                                    </div>
+                                @elseif($status === 'ditolak')
+                                    <div class="flex justify-end">
+                                        <span class="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+                                            <span class="material-symbols-outlined text-[16px]">cancel</span>
+                                            Ditolak
+                                        </span>
+                                    </div>
+                                @else
+                                    <div class="flex justify-end">
+                                        <span class="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-500">
+                                            <span class="material-symbols-outlined text-[16px]">hourglass_empty</span>
+                                            Menunggu bukti
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
                         </tr>
                     @empty

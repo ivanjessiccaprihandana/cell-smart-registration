@@ -78,8 +78,14 @@
                         $quota = $program->quota;
                         $registered = $program->registered_users_count ?? $program->registeredUsersCount();
                         $remaining = $program->remaining_quota ?? $program->remainingQuota();
-                        $isFull = $program->is_full ?? $program->isFull();
+                        $isProgramFull = $program->is_full ?? $program->isFull();
+                        $isScheduleFull = (bool) ($program->schedule_is_full ?? false);
+                        $isFull = $isProgramFull || $isScheduleFull;
                         $percent = $quota ? min(100, round(($registered / max(1, $quota)) * 100)) : 0;
+                        $scheduleUsed = (int) ($program->schedule_used_capacity ?? 0);
+                        $scheduleTotal = (int) ($program->schedule_total_capacity ?? 0);
+                        $scheduleRemaining = (int) ($program->schedule_remaining_capacity ?? 0);
+                        $schedulePercent = $scheduleTotal ? min(100, round(($scheduleUsed / max(1, $scheduleTotal)) * 100)) : 0;
                         $categorySlug = \Illuminate\Support\Str::slug($program->category ?? 'program');
                         $priceText = $program->price !== null ? 'Rp ' . number_format($program->price, 0, ',', '.') : 'Hubungi Admin';
                         $chooseUrl = auth()->check()
@@ -94,7 +100,7 @@
                     >
                         <div class="flex items-start justify-between gap-4">
                             <span class="inline-flex items-center rounded-full {{ $isFull ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700' }} px-4 py-2 text-sm font-bold">
-                                {{ $isFull ? 'Kuota Penuh' : 'Masih Tersedia' }}
+                                {{ $isScheduleFull ? 'Jadwal Penuh' : ($isProgramFull ? 'Kuota Penuh' : 'Masih Tersedia') }}
                             </span>
                             <div class="flex h-14 w-14 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
                                 <span class="material-symbols-outlined text-3xl">
@@ -115,18 +121,26 @@
 
                             <div class="mt-6 rounded-lg bg-slate-50 p-5">
                                 <div class="flex items-center justify-between">
-                                    <p class="font-bold text-slate-700">Kuota</p>
+                                    <p class="font-bold text-slate-700">{{ $scheduleTotal ? 'Jadwal terisi' : 'Kuota' }}</p>
                                     <p class="text-lg font-bold text-slate-950">
-                                        {{ $registered }} / {{ $quota ?? 'Tidak dibatasi' }}
+                                        @if($scheduleTotal)
+                                            {{ $scheduleUsed }} / {{ $scheduleTotal }}
+                                        @else
+                                            {{ $registered }} / {{ $quota ?? 'Tidak dibatasi' }}
+                                        @endif
                                     </p>
                                 </div>
                                 <div class="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
-                                    <div class="h-full rounded-full {{ $isFull ? 'bg-rose-500' : 'bg-indigo-600' }}" style="width: {{ $quota ? $percent : 12 }}%"></div>
+                                    <div class="h-full rounded-full {{ $isFull ? 'bg-rose-500' : 'bg-indigo-600' }}" style="width: {{ $scheduleTotal ? $schedulePercent : ($quota ? $percent : 12) }}%"></div>
                                 </div>
                                 <p class="mt-4 font-semibold {{ $isFull ? 'text-rose-600' : 'text-slate-500' }}">
-                                    @if($quota === null)
+                                    @if($isScheduleFull)
+                                        Semua jadwal program ini penuh
+                                    @elseif($scheduleTotal)
+                                        {{ $scheduleRemaining }} kursi jadwal tersisa
+                                    @elseif($quota === null)
                                         Kuota fleksibel
-                                    @elseif($isFull)
+                                    @elseif($isProgramFull)
                                         Kelas ini sudah penuh
                                     @else
                                         {{ $remaining }} kuota tersisa
@@ -140,7 +154,7 @@
                             class="mt-6 inline-flex h-14 items-center justify-center gap-3 rounded-lg {{ $isFull ? 'pointer-events-none bg-slate-200 text-slate-500' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700' }} px-5 text-base font-bold transition"
                             aria-disabled="{{ $isFull ? 'true' : 'false' }}"
                         >
-                            {{ $isFull ? 'Kuota Penuh' : 'Pilih Program' }}
+                            {{ $isScheduleFull ? 'Jadwal Penuh' : ($isProgramFull ? 'Kuota Penuh' : 'Pilih Program') }}
                             @unless($isFull)
                                 <span class="material-symbols-outlined">arrow_forward</span>
                             @endunless

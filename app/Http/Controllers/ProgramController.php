@@ -6,6 +6,8 @@ use App\Models\Program;
 use App\Models\ClassSchedule;
 use App\Models\ProgramEnrollment;
 use App\Models\PlacementTestAttempt;
+use App\Models\SchedulePreference;
+use App\Models\ScheduleTemplate;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -28,6 +30,18 @@ class ProgramController extends Controller
                 $program->registered_users_count = $program->registeredUsersCount();
                 $program->remaining_quota = $program->remainingQuota();
                 $program->is_full = $program->isFull();
+                $activeScheduleTemplates = ScheduleTemplate::with('preferences')
+                    ->where('is_active', true)
+                    ->where('program_id', $program->id)
+                    ->get();
+                $program->schedule_total_capacity = $activeScheduleTemplates->sum(fn (ScheduleTemplate $template) => (int) $template->max_students);
+                $program->schedule_used_capacity = $activeScheduleTemplates->sum(fn (ScheduleTemplate $template) => $template->activeStudentCount());
+                $program->schedule_remaining_capacity = max(0, $program->schedule_total_capacity - $program->schedule_used_capacity);
+                $program->available_schedule_count = $activeScheduleTemplates
+                    ->filter(fn (ScheduleTemplate $template) => !$template->isFull())
+                    ->count();
+                $program->schedule_is_full = $activeScheduleTemplates->isNotEmpty()
+                    && $program->available_schedule_count === 0;
                 $program->class_type_counts = $this->programUsesClassType($program->name)
                     ? $this->classTypeCountsForProgram($program)
                     : [];
@@ -38,14 +52,21 @@ class ProgramController extends Controller
         return view('program.cekkuota', [
             'programs' => $programs,
             'totalPrograms' => $programs->count(),
-            'availablePrograms' => $programs->filter(fn (Program $program) => !$program->is_full)->count(),
-            'fullPrograms' => $programs->filter(fn (Program $program) => $program->is_full)->count(),
+            'availablePrograms' => $programs->filter(fn (Program $program) => !$program->is_full && !$program->schedule_is_full)->count(),
+            'fullPrograms' => $programs->filter(fn (Program $program) => $program->is_full || $program->schedule_is_full)->count(),
         ]);
     }
 
     public function studentStatus()
     {
         $user = Auth::user();
+
+        if ($this->expireUnpaidRegistration($user)) {
+            return redirect()
+                ->route('programs.index')
+                ->withErrors(['program' => 'Batas upload bukti pembayaran 12 jam sudah lewat. Silakan pilih program dan jadwal kembali.']);
+        }
+
         $program = $user->program ? Program::find($user->program) : null;
         $latestPlacementAttempt = PlacementTestAttempt::where('user_id', $user->id)
             ->latest()
@@ -55,6 +76,7 @@ class ProgramController extends Controller
             'auth' => $user,
             'program' => $program,
             'latestPlacementAttempt' => $latestPlacementAttempt,
+            'requiresPlacementTest' => $program ? $this->programRequiresPlacementTest($program) : true,
         ]);
     }
 
@@ -66,23 +88,74 @@ class ProgramController extends Controller
             ->latest()
             ->first();
 
-        if (!$latestPlacementAttempt) {
+        $requiresPlacementTest = $program ? $this->programRequiresPlacementTest($program) : true;
+
+        if ($requiresPlacementTest && !$latestPlacementAttempt) {
             return redirect()
                 ->route('student.status')
-                ->withErrors(['schedule' => 'Jadwal kelas akan tersedia setelah Anda menyelesaikan placement test.']);
+                ->withErrors(['schedule' => 'Jadwal belajar akan tersedia setelah Anda menyelesaikan placement test.']);
         }
 
         return view('student.schedule', [
             'auth' => $user,
             'program' => $program,
             'latestPlacementAttempt' => $latestPlacementAttempt,
-            'assignedSchedules' => ClassSchedule::with(['program', 'tutor'])
+            'requiresPlacementTest' => $requiresPlacementTest,
+            'scheduleTemplates' => $program ? $this->matchingScheduleTemplates($user, $program, $latestPlacementAttempt?->level) : collect(),
+            'schedulePreferences' => SchedulePreference::with('scheduleTemplate.program', 'scheduleTemplate.tutor')
+                ->where('user_id', $user->id)
+                ->orderBy('priority')
+                ->get(),
+            'dayLabels' => $this->dayLabels(),
+            'assignedSchedules' => ClassSchedule::with(['program', 'tutor', 'classRoom'])
                 ->where('user_id', $user->id)
                 ->whereDate('class_date', '>=', now()->toDateString())
                 ->orderBy('class_date')
                 ->orderBy('start_time')
                 ->get(),
         ]);
+    }
+
+    public function storeSchedulePreferences(Request $request)
+    {
+        $user = Auth::user();
+        $program = $user->program ? Program::find($user->program) : null;
+
+        if (!$program || $user->payment_status !== 'diterima') {
+            return redirect()
+                ->route('student.status')
+                ->withErrors(['schedule' => 'Preferensi jadwal hanya bisa dipilih setelah pembayaran disetujui.']);
+        }
+
+        $latestPlacementAttempt = PlacementTestAttempt::where('user_id', $user->id)
+            ->latest()
+            ->first();
+
+        $validTemplateIds = $this->matchingScheduleTemplates($user, $program, $latestPlacementAttempt?->level)
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->all();
+
+        $validated = $request->validate([
+            'schedule_template_id' => ['required', Rule::in($validTemplateIds)],
+        ], [
+            'schedule_template_id.required' => 'Pilih salah satu jadwal belajar.',
+        ]);
+
+        SchedulePreference::where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'rejected'])
+            ->delete();
+
+        SchedulePreference::create([
+            'user_id' => $user->id,
+            'schedule_template_id' => $validated['schedule_template_id'],
+            'priority' => 1,
+            'status' => 'pending',
+        ]);
+
+        return redirect()
+            ->route('student.schedule')
+            ->with('success', 'Jadwal belajar berhasil dipilih.');
     }
 
     private function scheduleForLevel(string $level): array
@@ -145,34 +218,67 @@ class ProgramController extends Controller
     public function index()
     {
         $auth = Auth::user();
+
+        if ($auth) {
+            $this->expireUnpaidRegistration($auth);
+            $auth->refresh();
+        }
+
         $selectedProgramId = (string) request('program', $auth->program ?? '');
 
 
-        $programs = Program::where('status', 'active')
-            ->where('name', 'not like', '% - Reguler')
-            ->where('name', 'not like', '% - Private')
-            ->where('name', 'not like', '% - Conversation')
-            ->latest()
-            ->get()
-            ->each(function (Program $program) {
-                $program->registered_users_count = $program->registeredUsersCount();
-                $program->remaining_quota = $program->remainingQuota();
-                $program->is_full = $program->isFull();
-                $program->class_type_counts = $this->programUsesClassType($program->name)
-                    ? $this->classTypeCountsForProgram($program)
-                    : [];
-            })
-            ->sortBy(fn (Program $program) => $this->programDisplayOrder($program->name))
-            ->values();
+        $programs = $this->activeSelectablePrograms();
 
         $selectedProgram = $selectedProgramId !== ''
             ? $programs->firstWhere('id', $selectedProgramId) ?? Program::find($selectedProgramId)
             : null;
+        $currentScheduleTemplateId = SchedulePreference::query()
+            ->where('user_id', $auth->id)
+            ->whereIn('status', ['pending', 'assigned'])
+            ->oldest('priority')
+            ->value('schedule_template_id');
 
         return view('program.index', [
             'auth' => $auth,
             'programs' => $programs,
             'selectedProgramModel' => $selectedProgram,
+            'currentScheduleTemplateId' => $currentScheduleTemplateId ? (string) $currentScheduleTemplateId : '',
+            'scheduleTemplates' => ScheduleTemplate::with(['program', 'tutor', 'classRoom', 'preferences'])
+                ->where('is_active', true)
+                ->orderBy('program_id')
+                ->orderBy('start_time')
+                ->get(),
+            'dayLabels' => $this->dayLabels(),
+            'isChangingSelection' => request()->boolean('change'),
+        ]);
+    }
+
+    public function change()
+    {
+        $auth = Auth::user();
+
+        if ($this->expireUnpaidRegistration($auth)) {
+            return redirect()
+                ->route('programs.index')
+                ->withErrors(['program' => 'Batas upload bukti pembayaran 12 jam sudah lewat. Silakan pilih program dan jadwal kembali.']);
+        }
+
+        $paymentStatus = $auth->payment_status ?: 'belum_upload';
+        $canChangeProgramBeforePayment = $auth->program
+            && !$auth->payment_proof_path
+            && $paymentStatus === 'belum_upload';
+
+        if ($auth->program && !$canChangeProgramBeforePayment) {
+            return redirect()
+                ->route('programs.payment')
+                ->withErrors(['program' => 'Program tidak bisa diubah setelah bukti pembayaran diupload. Silakan hubungi admin jika perlu perubahan.']);
+        }
+
+        return view('program.change', [
+            'auth' => $auth,
+            'programs' => $this->activeSelectablePrograms(),
+            'currentProgramId' => (string) ($auth->program ?? ''),
+            'paymentDeadline' => $auth->registration_expires_at,
         ]);
     }
 
@@ -193,11 +299,17 @@ class ProgramController extends Controller
 public function store(Request $request)
 {
     $user = auth()->user();
+    $this->expireUnpaidRegistration($user);
+    $user->refresh();
 
-    if ($user->program) {
+    $canChangeProgramBeforePayment = $user->program
+        && !$user->payment_proof_path
+        && ($user->payment_status ?: 'belum_upload') === 'belum_upload';
+
+    if ($user->program && !$canChangeProgramBeforePayment) {
         return redirect()
             ->route('programs.payment')
-            ->with('success', 'Anda sudah terdaftar pada program. Silakan lanjutkan proses pembayaran.');
+            ->withErrors(['program' => 'Program tidak bisa diubah setelah bukti pembayaran diupload. Silakan hubungi admin jika perlu perubahan.']);
     }
 
     $request->validate([
@@ -208,12 +320,39 @@ public function store(Request $request)
             Rule::exists('programs', 'id')->where('status', 'active'),
         ],
         'class_type' => ['nullable', Rule::in(['Reguler', 'Private', 'Conversation'])],
+        'schedule_template_id' => ['nullable', Rule::exists('schedule_templates', 'id')],
     ]);
 
     $selectedProgram = Program::findOrFail($request->program);
     $classType = $this->programUsesClassType($selectedProgram->name)
         ? ($request->class_type ?: 'Reguler')
         : null;
+    $selectedScheduleTemplateId = $request->input('schedule_template_id');
+
+    $matchingScheduleTemplates = $this->matchingRegistrationScheduleTemplates($selectedProgram, $classType, false);
+    $availableScheduleTemplates = $matchingScheduleTemplates->filter(fn (ScheduleTemplate $template) => $template->hasSeatForUser($user->id))->values();
+    $validScheduleTemplateIds = $availableScheduleTemplates
+        ->pluck('id')
+        ->map(fn ($id) => (string) $id);
+
+    if ($matchingScheduleTemplates->isNotEmpty() && $availableScheduleTemplates->isEmpty()) {
+        return back()
+            ->withErrors(['schedule_template_id' => 'Semua pilihan jadwal untuk program dan jenis kelas ini sudah penuh. Silakan pilih program/jenis kelas lain atau hubungi admin.'])
+            ->withInput();
+    }
+
+    if ($validScheduleTemplateIds->isNotEmpty() && !$selectedScheduleTemplateId) {
+        return back()
+            ->withErrors(['schedule_template_id' => 'Pilih salah satu jadwal belajar yang tersedia.'])
+            ->withInput();
+    }
+
+    if ($selectedScheduleTemplateId && !$validScheduleTemplateIds->contains((string) $selectedScheduleTemplateId)) {
+        return back()
+            ->withErrors(['schedule_template_id' => 'Jadwal belajar tidak sesuai dengan program, jenis kelas, atau kapasitas sudah penuh.'])
+            ->withInput();
+    }
+
     $program = $selectedProgram;
     $currentProgram = (string) $user->program;
     $currentClassType = $user->class_type;
@@ -225,22 +364,22 @@ public function store(Request $request)
             ->withInput();
     }
 
-    if ($programChanged && $user->payment_proof_path) {
-        Storage::disk('public')->delete($user->payment_proof_path);
-    }
-
     $user->update([
         'whatsapp' => $request->whatsapp,
         'address' => $request->address,
         'program' => (string) $program->id,
         'class_type' => $classType,
-        'payment_proof_path' => $programChanged ? null : $user->payment_proof_path,
-        'payment_status' => $programChanged
-            ? 'belum_upload'
-            : ($user->payment_proof_path ? $user->payment_status : 'belum_upload'),
+        'payment_proof_path' => null,
+        'payment_status' => 'belum_upload',
+        'registration_expires_at' => now()->addHours(12),
     ]);
 
     $period = $this->monthlyEnrollmentPeriod($program);
+
+    ProgramEnrollment::query()
+        ->where('user_id', $user->id)
+        ->whereIn('status', ['pending', 'rejected'])
+        ->update(['status' => 'rejected']);
 
     ProgramEnrollment::create([
         'user_id' => $user->id,
@@ -253,6 +392,19 @@ public function store(Request $request)
         'status' => 'pending',
     ]);
 
+    SchedulePreference::where('user_id', $user->id)
+        ->whereIn('status', ['pending', 'rejected'])
+        ->delete();
+
+    if ($selectedScheduleTemplateId) {
+        SchedulePreference::create([
+            'user_id' => $user->id,
+            'schedule_template_id' => $selectedScheduleTemplateId,
+            'priority' => 1,
+            'status' => 'pending',
+        ]);
+    }
+
     return redirect()
         ->route('programs.payment')
         ->with('success', 'Pendaftaran program berhasil disimpan. Silakan upload bukti pembayaran.');
@@ -261,6 +413,12 @@ public function store(Request $request)
     public function payment()
     {
         $user = Auth::user();
+
+        if ($this->expireUnpaidRegistration($user)) {
+            return redirect()
+                ->route('programs.index')
+                ->withErrors(['program' => 'Batas upload bukti pembayaran 12 jam sudah lewat. Silakan pilih program dan jadwal kembali.']);
+        }
 
         $program = $this->selectedProgramOrRedirect($user);
         if ($program instanceof \Illuminate\Http\RedirectResponse) {
@@ -285,10 +443,28 @@ public function store(Request $request)
 
         $user = Auth::user();
 
+        if ($this->expireUnpaidRegistration($user)) {
+            return redirect()
+                ->route('programs.index')
+                ->withErrors(['program' => 'Batas upload bukti pembayaran 12 jam sudah lewat. Silakan pilih program dan jadwal kembali.']);
+        }
+
         if (!$user->program) {
             return redirect()
                 ->route('programs.index')
                 ->withErrors(['program' => 'Silakan pilih program terlebih dahulu sebelum upload pembayaran.']);
+        }
+
+        $preference = SchedulePreference::with('scheduleTemplate')
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->oldest('priority')
+            ->first();
+
+        if ($preference?->scheduleTemplate && !$preference->scheduleTemplate->hasSeatForUser($user->id)) {
+            return redirect()
+                ->route('programs.index')
+                ->withErrors(['schedule_template_id' => 'Jadwal belajar yang Anda pilih sudah penuh. Silakan pilih jadwal lain sebelum upload bukti pembayaran.']);
         }
 
         if ($user->payment_proof_path) {
@@ -300,6 +476,7 @@ public function store(Request $request)
         $user->update([
             'payment_proof_path' => $path,
             'payment_status' => 'menunggu_verifikasi',
+            'registration_expires_at' => null,
         ]);
 
         return redirect()
@@ -382,6 +559,7 @@ public function store(Request $request)
         return view('program.payment-success', [
             'auth' => $user,
             'program' => $program,
+            'requiresPlacementTest' => $this->programRequiresPlacementTest($program),
         ]);
     }
 
@@ -435,6 +613,60 @@ public function store(Request $request)
         return $program;
     }
 
+    private function expireUnpaidRegistration(User $user): bool
+    {
+        $paymentStatus = $user->payment_status ?: 'belum_upload';
+
+        if (
+            !$user->program
+            || $user->payment_proof_path
+            || $paymentStatus !== 'belum_upload'
+            || !$user->registration_expires_at
+            || now()->lessThanOrEqualTo($user->registration_expires_at)
+        ) {
+            return false;
+        }
+
+        ProgramEnrollment::query()
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'rejected'])
+            ->update(['status' => 'rejected']);
+
+        SchedulePreference::query()
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'rejected'])
+            ->delete();
+
+        $user->update([
+            'program' => null,
+            'class_type' => null,
+            'payment_status' => 'belum_upload',
+            'registration_expires_at' => null,
+        ]);
+
+        return true;
+    }
+
+    private function activeSelectablePrograms()
+    {
+        return Program::where('status', 'active')
+            ->where('name', 'not like', '% - Reguler')
+            ->where('name', 'not like', '% - Private')
+            ->where('name', 'not like', '% - Conversation')
+            ->latest()
+            ->get()
+            ->each(function (Program $program) {
+                $program->registered_users_count = $program->registeredUsersCount();
+                $program->remaining_quota = $program->remainingQuota();
+                $program->is_full = $program->isFull();
+                $program->class_type_counts = $this->programUsesClassType($program->name)
+                    ? $this->classTypeCountsForProgram($program)
+                    : [];
+            })
+            ->sortBy(fn (Program $program) => $this->programDisplayOrder($program->name))
+            ->values();
+    }
+
     private function programDisplayOrder(string $programName): int
     {
         return [
@@ -464,6 +696,7 @@ public function store(Request $request)
     {
         $counts = User::query()
             ->where('program', (string) $program->id)
+            ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima'])
             ->selectRaw('COALESCE(class_type, ?) as class_type, COUNT(*) as total', ['Reguler'])
             ->groupBy('class_type')
             ->pluck('total', 'class_type');
@@ -475,10 +708,69 @@ public function store(Request $request)
         ];
     }
 
+    private function matchingScheduleTemplates(User $user, Program $program, ?string $level)
+    {
+        return ScheduleTemplate::with(['program', 'tutor', 'classRoom', 'preferences'])
+            ->where('is_active', true)
+            ->where('program_id', $program->id)
+            ->where(function ($query) use ($user) {
+                $query
+                    ->whereNull('class_type')
+                    ->orWhere('class_type', $user->class_type);
+            })
+            ->where(function ($query) use ($level) {
+                $query
+                    ->whereNull('level')
+                    ->when($level, fn ($query) => $query->orWhere('level', $level));
+            })
+            ->orderBy('start_time')
+            ->get()
+            ->filter(fn (ScheduleTemplate $template) => !$template->isFull())
+            ->values();
+    }
+
+    private function matchingRegistrationScheduleTemplates(Program $program, ?string $classType, bool $onlyAvailable = true)
+    {
+        $templates = ScheduleTemplate::with('preferences')
+            ->where('is_active', true)
+            ->where('program_id', $program->id)
+            ->where(function ($query) use ($classType) {
+                $query
+                    ->whereNull('class_type')
+                    ->when($classType, fn ($query) => $query->orWhere('class_type', $classType));
+            })
+            ->get();
+
+        return $onlyAvailable
+            ? $templates->filter(fn (ScheduleTemplate $template) => !$template->isFull())->values()
+            : $templates->values();
+    }
+
+    private function dayLabels(): array
+    {
+        return [
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+            7 => 'Minggu',
+        ];
+    }
+
     private function programUsesClassType(string $programName): bool
     {
         return collect($this->programsWithClassType())
             ->contains(fn (string $name) => Str::lower($name) === Str::lower($programName));
+    }
+
+    private function programRequiresPlacementTest(Program $program): bool
+    {
+        return !(
+            Str::lower($program->category ?? '') === 'bimbel'
+            || Str::startsWith(Str::lower($program->name), 'bimbel')
+        );
     }
 
     private function monthlyEnrollmentPeriod(Program $program, ?ProgramEnrollment $latestEnrollment = null): array

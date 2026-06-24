@@ -60,7 +60,8 @@ class Program extends Model
     public function registeredUsersCount(): int
     {
         $query = User::query()
-            ->where('program', (string) $this->id);
+            ->where('program', (string) $this->id)
+            ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
 
         $variant = $this->classTypeVariant();
 
@@ -71,7 +72,8 @@ class Program extends Model
                 $query->orWhere(function ($query) use ($baseProgram, $variant) {
                     $query
                         ->where('program', (string) $baseProgram->id)
-                        ->where('class_type', $variant['class_type']);
+                        ->where('class_type', $variant['class_type'])
+                        ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
                 });
             }
         }

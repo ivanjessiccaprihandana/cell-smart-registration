@@ -5,7 +5,12 @@
     $selectedProgram = (string) old('program', request('program', $auth->program ?? ''));
     $selectedClassType = old('class_type', $auth->class_type ?? 'Reguler');
     $classTypeProgramNames = ['English for Kids', 'English for Teens', 'English for Adult'];
-    $isProgramLocked = filled($auth->program ?? null);
+    $paymentStatus = $auth->payment_status ?: 'belum_upload';
+    $isChangingSelection = (bool) ($isChangingSelection ?? false);
+    $canChangeProgramBeforePayment = filled($auth->program ?? null)
+        && blank($auth->payment_proof_path ?? null)
+        && $paymentStatus === 'belum_upload';
+    $isProgramLocked = filled($auth->program ?? null) && !$canChangeProgramBeforePayment;
     $selectedProgramModel = $selectedProgramModel ?? $programs->firstWhere('id', $selectedProgram);
     $hasSelectedProgram = filled($selectedProgram) && $selectedProgramModel;
     $shouldLockProgram = $isProgramLocked && $selectedProgramModel;
@@ -71,6 +76,50 @@
     $selectedProgramGroup = collect($programGroups)
         ->keys()
         ->first(fn ($groupKey) => collect($programGroups[$groupKey]['programs'])->contains(fn ($choice) => $selectedProgramChoice && $choice['name'] === $selectedProgramChoice['name']));
+    $dayLabels = $dayLabels ?? [];
+    $scheduleTemplates = $scheduleTemplates ?? collect();
+    $currentScheduleTemplateId = (string) ($currentScheduleTemplateId ?? '');
+    $currentScheduleTemplate = $currentScheduleTemplateId !== ''
+        ? $scheduleTemplates->firstWhere('id', (int) $currentScheduleTemplateId)
+        : null;
+    $currentScheduleLabel = $currentScheduleTemplate
+        ? collect($currentScheduleTemplate->days ?? [])
+            ->map(fn ($day) => $dayLabels[$day] ?? $day)
+            ->join(' & ') . ', ' . $currentScheduleTemplate->start_time->format('H:i') . ' - ' . $currentScheduleTemplate->end_time->format('H:i')
+        : 'Belum memilih jadwal belajar';
+    $currentRoomLabel = $currentScheduleTemplate
+        ? ($currentScheduleTemplate->classRoom?->name ?? $currentScheduleTemplate->room ?: 'Ruang belum ditentukan')
+        : '-';
+    $currentPriceLabel = $selectedProgramModel
+        ? $selectedProgramModel->formattedPriceForClassType($selectedClassType, 'hubungi admin')
+        : 'hubungi admin';
+    $paymentDeadlineLabel = $auth->registration_expires_at
+        ? $auth->registration_expires_at->format('d M Y H:i')
+        : null;
+    $scheduleTemplateChoices = $scheduleTemplates
+        ->map(function ($template) use ($dayLabels, $auth, $currentScheduleTemplateId) {
+            $days = collect($template->days ?? [])
+                ->map(fn ($day) => $dayLabels[$day] ?? $day)
+                ->join(' & ');
+            $hasSeatForCurrentUser = $template->hasSeatForUser($auth->id);
+            $remainingSeats = $template->remainingSeats();
+
+            return [
+                'id' => (string) $template->id,
+                'program_id' => (string) $template->program_id,
+                'class_type' => $template->class_type,
+                'level' => $template->level,
+                'days' => $days,
+                'time' => $template->start_time->format('H:i') . ' - ' . $template->end_time->format('H:i'),
+                'room' => $template->classRoom?->name ?? $template->room ?: 'Ruang belum ditentukan',
+                'tutor' => $template->tutor?->name,
+                'remaining_seats' => max(0, $remainingSeats),
+                'max_students' => $template->max_students,
+                'is_full' => !$hasSeatForCurrentUser,
+            ];
+        })
+        ->values();
+    $oldScheduleTemplateId = (string) old('schedule_template_id', $currentScheduleTemplateId);
 @endphp
 
 <style>
@@ -117,16 +166,69 @@
 
                 @if($shouldLockProgram)
                     <div class="mb-6 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold leading-6 text-indigo-800">
-                        Anda sudah terdaftar pada program ini. Pendaftaran tidak bisa dikirim ulang dari halaman ini.
+                        Program tidak bisa diubah setelah bukti pembayaran diupload. Silakan hubungi admin jika perlu perubahan.
+                    </div>
+                @elseif($canChangeProgramBeforePayment)
+                    <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold leading-6 text-emerald-800">
+                        Anda belum upload bukti pembayaran, jadi program, jenis kelas, dan jadwal belajar masih bisa diubah.
                     </div>
                 @endif
 
                 <form id="registrationForm" method="POST" action="{{ route('programs.store') }}" class="space-y-6">
                     @csrf
-                    @if($hasSelectedProgram)
+                    @if($shouldLockProgram && $hasSelectedProgram)
                         <input type="hidden" name="program" value="{{ $selectedProgram }}">
                     @endif
-                    <div id="formStepFields" class="space-y-6">
+
+                    @if($canChangeProgramBeforePayment && $hasSelectedProgram && !$isChangingSelection)
+                        <div id="currentChoiceSummary" class="space-y-5 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
+                            <div class="flex items-start gap-3">
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-indigo-600">
+                                    <span class="material-symbols-outlined text-[24px]">fact_check</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold uppercase tracking-wide text-indigo-600">Pilihan Saat Ini</p>
+                                    <h2 class="mt-1 text-xl font-extrabold text-slate-950">{{ $selectedProgramModel->name }}</h2>
+                                    <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">Cek pilihan Anda. Jika sudah sesuai, langsung lanjut ke pembayaran.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div class="rounded-xl bg-white p-4">
+                                    <p class="text-xs font-bold uppercase text-slate-500">Jenis Kelas</p>
+                                    <p class="mt-1 font-extrabold text-slate-950">{{ $usesClassType($selectedProgramModel->name) ? $selectedClassType : 'Tanpa jenis kelas' }}</p>
+                                </div>
+                                <div class="rounded-xl bg-white p-4">
+                                    <p class="text-xs font-bold uppercase text-slate-500">Biaya</p>
+                                    <p class="mt-1 font-extrabold text-indigo-700">{{ $currentPriceLabel }}</p>
+                                </div>
+                                <div class="rounded-xl bg-white p-4 sm:col-span-2">
+                                    <p class="text-xs font-bold uppercase text-slate-500">Jadwal Belajar</p>
+                                    <p class="mt-1 font-extrabold text-slate-950">{{ $currentScheduleLabel }}</p>
+                                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ $currentRoomLabel }}</p>
+                                </div>
+                                @if($paymentDeadlineLabel)
+                                    <div class="rounded-xl bg-white p-4 sm:col-span-2">
+                                        <p class="text-xs font-bold uppercase text-slate-500">Batas Upload Bukti</p>
+                                        <p class="mt-1 font-extrabold text-rose-600">{{ $paymentDeadlineLabel }}</p>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <a href="{{ route('programs.payment') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
+                                    Tetap Pakai Pilihan Ini
+                                    <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+                                </a>
+                                <button id="editChoiceButton" type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-3 text-sm font-bold text-indigo-700 hover:border-indigo-600">
+                                    <span class="material-symbols-outlined text-[20px]">edit</span>
+                                    Ubah Pilihan
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div id="formStepFields" class="{{ $canChangeProgramBeforePayment && $hasSelectedProgram && !$isChangingSelection ? 'hidden ' : '' }}space-y-6">
                         <div>
                             <label for="name" class="mb-2 block text-sm font-semibold text-slate-800">Nama Lengkap</label>
                             <div class="relative">
@@ -156,7 +258,7 @@
                                 <label for="whatsapp" class="mb-2 block text-sm font-semibold text-slate-800">Nomor WhatsApp</label>
                                 <div class="flex">
                                     <span class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-100 px-4 text-sm font-semibold text-slate-600">+62</span>
-                                    <input id="whatsapp" name="whatsapp" type="tel" value="{{ old('whatsapp') }}" required
+                                    <input id="whatsapp" name="whatsapp" type="tel" value="{{ old('whatsapp', $auth->whatsapp ?? '') }}" required
                                         class="w-full rounded-r-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
                                         placeholder="812345678" />
                                 </div>
@@ -170,7 +272,7 @@
                             <label for="address" class="mb-2 block text-sm font-semibold text-slate-800">Alamat Lengkap</label>
                             <textarea id="address" name="address" rows="3" required
                                 class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
-                                placeholder="Masukkan alamat lengkap siswa">{{ old('address') }}</textarea>
+                                placeholder="Masukkan alamat lengkap siswa">{{ old('address', $auth->address ?? '') }}</textarea>
                             @error('address')
                                 <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -179,12 +281,13 @@
                         <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
                             <label for="program" class="mb-2 block text-sm font-semibold text-slate-800">Pilih Program</label>
                             <div class="relative">
-                                @if($hasSelectedProgram)
+                                @if($shouldLockProgram && $hasSelectedProgram)
                                     @php
                                         $quotaLabel = $selectedProgramModel->quota ? $selectedProgramModel->remaining_quota . ' kuota tersisa' : 'kuota tidak dibatasi';
                                         $priceLabel = $selectedProgramModel->formattedPriceForClassType(null, 'hubungi admin');
                                     @endphp
                                     <input id="program" type="text" value="{{ $selectedProgramModel->name }} " readonly
+                                        data-program-id="{{ $selectedProgramModel->id }}"
                                         data-program-name="{{ $selectedProgramModel->name }}"
                                         data-class-type="{{ $usesClassType($selectedProgramModel->name) ? '1' : '0' }}"
                                         data-price-regular="{{ $variantPrice($selectedProgramModel, 'Reguler') }}"
@@ -226,7 +329,7 @@
                             </div>
                             @if($hasSelectedProgram)
                                 <p class="mt-2 text-xs font-medium text-slate-500">
-                                    {{ $shouldLockProgram ? 'Program sudah dipilih dan tidak perlu dipilih ulang.' : 'Program sudah dipilih dari halaman sebelumnya.' }}
+                                    {{ $shouldLockProgram ? 'Program sudah dikunci karena bukti pembayaran sudah dikirim.' : 'Program saat ini sudah terpilih, tetapi masih bisa diganti sebelum upload bukti pembayaran.' }}
                                 </p>
                             @endif
 
@@ -252,6 +355,22 @@
                             <div class="mt-5 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
                                 <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">Estimasi Biaya</p>
                                 <p id="selectedPrice" class="mt-1 text-lg font-extrabold text-indigo-700">Pilih program dahulu</p>
+                            </div>
+
+                            <div id="schedulePreferenceWrapper" class="mt-5 rounded-xl border border-slate-200 bg-white p-5">
+                                <div class="flex items-start gap-3">
+                                    <span class="material-symbols-outlined text-[22px] text-indigo-600">event_available</span>
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-900">Pilih Jadwal Belajar</p>
+                                        <p class="mt-1 text-xs font-medium leading-5 text-slate-500">Pilih satu jadwal belajar dari CELL yang paling sesuai dengan waktu calon siswa.</p>
+                                    </div>
+                                </div>
+                                <div id="schedulePreferenceList" class="mt-4 space-y-3"></div>
+                                <p id="schedulePreferenceEmpty" class="mt-4 rounded-lg bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">Pilih program terlebih dahulu untuk melihat jadwal tersedia.</p>
+                                <p id="schedulePreferenceCounter" class="mt-3 text-xs font-bold text-slate-500">Jadwal ini akan dipakai setelah pembayaran disetujui admin.</p>
+                                @error('schedule_template_id')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <p class="mt-3 text-xs font-medium text-slate-500">Untuk English for Kids, Teens, dan Adult, pilih apakah kelasnya Reguler, Private, atau Conversation.</p>
@@ -300,6 +419,10 @@
                                 <span class="text-sm font-semibold text-slate-500">Estimasi Biaya</span>
                                 <span id="confirmPrice" class="text-right text-sm font-bold text-indigo-700">-</span>
                             </div>
+                            <div class="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+                                <span class="text-sm font-semibold text-slate-500">Jadwal Belajar</span>
+                                <span id="confirmSchedule" class="max-w-xs text-right text-sm font-bold text-slate-900">-</span>
+                            </div>
                             <div>
                                 <span class="text-sm font-semibold text-slate-500">Alamat</span>
                                 <p id="confirmAddress" class="mt-2 rounded-xl bg-slate-50 p-4 text-sm font-medium leading-6 text-slate-700">-</p>
@@ -313,8 +436,8 @@
                             <div class="flex items-start gap-3">
                                 <span class="material-symbols-outlined text-[22px] text-indigo-600">lock</span>
                                 <div>
-                                    <p class="text-sm font-bold text-slate-900">Pendaftaran sudah tersimpan</p>
-                                    <p class="mt-1 text-sm font-medium leading-6 text-slate-600">Anda tidak perlu lanjut ke step konfirmasi lagi untuk program yang sama.</p>
+                                    <p class="text-sm font-bold text-slate-900">Pendaftaran sudah dikunci</p>
+                                    <p class="mt-1 text-sm font-medium leading-6 text-slate-600">Perubahan program hanya bisa dilakukan sebelum bukti pembayaran diupload.</p>
                                 </div>
                             </div>
                         </div>
@@ -323,7 +446,7 @@
                             <span class="material-symbols-outlined text-[20px]">assignment_ind</span>
                         </a>
                     @else
-                        <button id="continueButton" type="button" class="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700 active:scale-[0.98]">
+                        <button id="continueButton" type="button" class="{{ $canChangeProgramBeforePayment && $hasSelectedProgram && !$isChangingSelection ? 'hidden ' : '' }}flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700 active:scale-[0.98]">
                             Lanjut Daftar Program
                             <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
                         </button>
@@ -369,6 +492,8 @@
         const continueButton = document.getElementById('continueButton');
         const confirmationActions = document.getElementById('confirmationActions');
         const backButton = document.getElementById('backButton');
+        const currentChoiceSummary = document.getElementById('currentChoiceSummary');
+        const editChoiceButton = document.getElementById('editChoiceButton');
         const stepProgress = document.getElementById('stepProgress');
         const indicators = document.querySelectorAll('.step-indicator');
 
@@ -382,11 +507,17 @@
         const classTypeWrapper = document.getElementById('classTypeWrapper');
         const classTypeInputs = document.querySelectorAll('input[name="class_type"]');
         const selectedPrice = document.getElementById('selectedPrice');
+        const schedulePreferenceList = document.getElementById('schedulePreferenceList');
+        const schedulePreferenceEmpty = document.getElementById('schedulePreferenceEmpty');
+        const schedulePreferenceCounter = document.getElementById('schedulePreferenceCounter');
         const isProgramLocked = @json((bool) $shouldLockProgram);
+        const canChangeProgramBeforePayment = @json((bool) ($canChangeProgramBeforePayment && $hasSelectedProgram && !$isChangingSelection));
         const shouldDisableClassType = @json((bool) $shouldDisableClassType);
         const programGroups = @json($programGroups);
         const initialProgramGroup = @json($selectedProgramGroup);
         const initialProgramId = @json($selectedProgram);
+        const scheduleTemplateChoices = @json($scheduleTemplateChoices);
+        const oldScheduleTemplateId = @json($oldScheduleTemplateId);
 
         function setStep(step) {
             indicators.forEach(function (indicator) {
@@ -459,7 +590,7 @@
             }
 
             return {
-                value: programInput.value,
+                value: programInput.dataset.programId || programInput.value,
                 text: programInput.value,
                 ...programInput.dataset,
             };
@@ -520,6 +651,117 @@
             }[selectedClassType()] || selectedProgram.priceRegular || 'hubungi admin';
         }
 
+        function selectedScheduleInput() {
+            return document.querySelector('input[name="schedule_template_id"]:checked');
+        }
+
+        function selectedScheduleTexts() {
+            const input = selectedScheduleInput();
+            return input?.dataset.label ? [input.dataset.label] : [];
+        }
+
+        function availableScheduleTemplates() {
+            return matchingScheduleTemplates().filter((template) => !template.is_full);
+        }
+
+        function syncScheduleLimit() {
+            if (schedulePreferenceCounter) {
+                const templates = matchingScheduleTemplates();
+                const availableTemplates = templates.filter((template) => !template.is_full);
+
+                if (templates.length > 0 && availableTemplates.length === 0) {
+                    schedulePreferenceCounter.textContent = 'Semua jadwal untuk pilihan ini sudah penuh.';
+                    schedulePreferenceCounter.classList.add('text-rose-600');
+                    schedulePreferenceCounter.classList.remove('text-slate-500');
+                    return;
+                }
+
+                schedulePreferenceCounter.textContent = selectedScheduleInput()
+                    ? 'Jadwal belajar sudah dipilih dan akan dipakai setelah pembayaran disetujui.'
+                    : 'Pilih satu jadwal belajar dari pilihan yang tersedia.';
+                schedulePreferenceCounter.classList.remove('text-rose-600');
+                schedulePreferenceCounter.classList.add('text-slate-500');
+            }
+        }
+
+        function matchingScheduleTemplates() {
+            const selectedProgram = currentProgramData();
+
+            if (!selectedProgram?.value) {
+                return [];
+            }
+
+            const shouldUseClassType = selectedProgram?.classType === '1';
+            const classType = shouldUseClassType ? selectedClassType() : '';
+
+            return scheduleTemplateChoices.filter((template) => {
+                const matchesProgram = template.program_id === String(selectedProgram.value);
+                const matchesClassType = !shouldUseClassType || !template.class_type || template.class_type === classType;
+
+                return matchesProgram && matchesClassType;
+            });
+        }
+
+        function renderSchedulePreferences() {
+            if (!schedulePreferenceList || !schedulePreferenceEmpty) {
+                return;
+            }
+
+            const selectedInput = selectedScheduleInput();
+            const selectedId = selectedInput?.value || oldScheduleTemplateId;
+            const templates = matchingScheduleTemplates();
+            const availableTemplates = templates.filter((template) => !template.is_full);
+            schedulePreferenceList.innerHTML = '';
+            schedulePreferenceEmpty.classList.toggle('hidden', templates.length > 0 && availableTemplates.length > 0);
+
+            if (!currentProgramData()?.value) {
+                schedulePreferenceEmpty.textContent = 'Pilih program terlebih dahulu untuk melihat jadwal tersedia.';
+            } else if (templates.length > 0 && availableTemplates.length === 0) {
+                schedulePreferenceEmpty.textContent = 'Semua jadwal untuk program dan jenis kelas ini sudah penuh. Silakan pilih jenis kelas lain atau hubungi admin.';
+            } else {
+                schedulePreferenceEmpty.textContent = 'Belum ada jadwal belajar untuk program dan jenis kelas ini. Admin masih bisa menghubungi Anda untuk konsultasi jadwal.';
+            }
+
+            templates.forEach((template) => {
+                const label = document.createElement('label');
+                label.className = 'flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm transition has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50';
+
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = 'schedule_template_id';
+                radio.value = template.id;
+                radio.required = !template.is_full;
+                radio.disabled = Boolean(template.is_full);
+                radio.className = 'mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500';
+                radio.dataset.label = `${template.days}, ${template.time}`;
+                radio.checked = !template.is_full && selectedId === template.id;
+                radio.addEventListener('change', syncScheduleLimit);
+
+                const content = document.createElement('span');
+                content.className = 'min-w-0 flex-1';
+
+                const title = document.createElement('span');
+                title.className = 'block font-bold text-slate-900';
+                title.textContent = `${template.days}, ${template.time}${template.is_full ? ' - Penuh' : ''}`;
+
+                const detail = document.createElement('span');
+                detail.className = 'mt-1 block text-xs font-medium leading-5 text-slate-500';
+                detail.textContent = `${template.room}${template.tutor ? ' / Tutor: ' + template.tutor : ''}${template.level ? ' / Level: ' + template.level : ''} / ${template.remaining_seats} dari ${template.max_students} kursi tersedia`;
+                if (template.is_full) {
+                    label.classList.add('cursor-not-allowed', 'opacity-70');
+                    label.classList.remove('cursor-pointer');
+                }
+
+                content.appendChild(title);
+                content.appendChild(detail);
+                label.appendChild(radio);
+                label.appendChild(content);
+                schedulePreferenceList.appendChild(label);
+            });
+
+            syncScheduleLimit();
+        }
+
         function updateProgramSelection() {
             if (programSubmenuInput) {
                 programInput.value = programSubmenuInput.value || '';
@@ -537,6 +779,9 @@
             if (selectedPrice) {
                 selectedPrice.textContent = selectedProgramPrice();
             }
+
+            renderSchedulePreferences();
+            syncContinueAvailability();
         }
 
         function fillConfirmation() {
@@ -545,11 +790,29 @@
             document.getElementById('confirmWhatsapp').textContent = whatsappInput.value ? '+62 ' + whatsappInput.value : '-';
             document.getElementById('confirmProgram').textContent = selectedProgramText();
             document.getElementById('confirmPrice').textContent = selectedProgramPrice();
+            document.getElementById('confirmSchedule').textContent = selectedScheduleTexts().join(' | ') || 'Belum memilih jadwal belajar';
             document.getElementById('confirmAddress').textContent = addressInput.value || '-';
         }
 
         function goToConfirmation() {
             if (!form.reportValidity()) {
+                return;
+            }
+
+            const templates = matchingScheduleTemplates();
+            const availableTemplates = availableScheduleTemplates();
+
+            if (templates.length > 0 && availableTemplates.length === 0) {
+                schedulePreferenceEmpty.textContent = 'Semua jadwal untuk program dan jenis kelas ini sudah penuh. Silakan pilih jenis kelas lain atau hubungi admin.';
+                schedulePreferenceEmpty.classList.remove('hidden');
+                schedulePreferenceEmpty.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            if (availableTemplates.length > 0 && !selectedScheduleInput()) {
+                schedulePreferenceCounter.textContent = 'Pilih satu jadwal belajar yang masih tersedia.';
+                schedulePreferenceCounter.classList.add('text-rose-600');
+                schedulePreferenceCounter.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
 
@@ -571,8 +834,35 @@
             fieldsStep.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        function syncContinueAvailability() {
+            if (!continueButton) {
+                return;
+            }
+
+            const templates = matchingScheduleTemplates();
+            const availableTemplates = templates.filter((template) => !template.is_full);
+            const shouldDisable = templates.length > 0 && availableTemplates.length === 0;
+
+            continueButton.disabled = shouldDisable;
+            continueButton.classList.toggle('cursor-not-allowed', shouldDisable);
+            continueButton.classList.toggle('opacity-60', shouldDisable);
+            continueButton.classList.toggle('hover:bg-indigo-700', !shouldDisable);
+
+            const label = continueButton.childNodes[0];
+            if (label) {
+                label.textContent = shouldDisable ? 'Jadwal Penuh' : 'Lanjut Daftar Program';
+            }
+        }
+
         continueButton?.addEventListener('click', goToConfirmation);
         backButton?.addEventListener('click', backToForm);
+        editChoiceButton?.addEventListener('click', function () {
+            currentChoiceSummary?.classList.add('hidden');
+            fieldsStep?.classList.remove('hidden');
+            continueButton?.classList.remove('hidden');
+            setStep(2);
+            fieldsStep?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
         if (programInput?.tagName === 'SELECT') {
             programInput.addEventListener('change', updateProgramSelection);
         }
@@ -589,6 +879,10 @@
             populateSubPrograms(initialProgramId);
         }
         updateProgramSelection();
+        if (canChangeProgramBeforePayment) {
+            fieldsStep?.classList.add('hidden');
+            continueButton?.classList.add('hidden');
+        }
         setStep(2);
     });
 </script>

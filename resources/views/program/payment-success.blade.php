@@ -3,6 +3,7 @@
 @section('content')
 @php
     $status = $auth->payment_status ?: 'menunggu_verifikasi';
+    $requiresPlacementTest = $requiresPlacementTest ?? true;
     $priceText = $program->formattedPriceForClassType($auth->class_type, 'Menunggu konfirmasi admin');
     $orderId = '#CELL-' . now()->format('Y') . str_pad((string) $auth->id, 4, '0', STR_PAD_LEFT);
     $transactionTime = ($auth->updated_at ?? now())->format('d M Y, H:i') . ' WIB';
@@ -55,24 +56,24 @@
         default => 'schedule',
     };
     $noticeText = match ($status) {
-        'diterima' => 'Status Anda sudah terverifikasi. Silakan menunggu informasi jadwal kelas dari admin atau hubungi admin jika membutuhkan detail kelas.',
+        'diterima' => 'Status Anda sudah terverifikasi. Silakan menunggu informasi jadwal belajar dari admin atau hubungi admin jika membutuhkan detail kelas.',
         'ditolak' => 'Status Anda ditolak. Penyebab paling umum: foto bukti kurang jelas, nominal tidak sesuai, atau rekening tujuan belum terlihat.',
         'belum_upload' => 'Anda belum mengirim bukti pembayaran. Upload bukti transfer untuk melanjutkan proses verifikasi.',
         default => 'Status akan berubah otomatis setelah admin menekan tombol Terima atau Tolak di halaman verifikasi pembayaran.',
     };
     $primaryHref = match ($status) {
-        'diterima' => route('placement-test'),
+        'diterima' => $requiresPlacementTest ? route('placement-test') : route('student.schedule'),
         'ditolak', 'belum_upload' => route('programs.payment'),
         default => route('student.status'),
     };
     $primaryLabel = match ($status) {
-        'diterima' => 'Lanjut Placement Test',
+        'diterima' => $requiresPlacementTest ? 'Lanjut Placement Test' : 'Konsultasi Jadwal',
         'ditolak' => 'Upload Ulang Bukti',
         'belum_upload' => 'Upload Bukti Pembayaran',
         default => 'Lihat Status Saya',
     };
     $primaryIcon = match ($status) {
-        'diterima' => 'quiz',
+        'diterima' => $requiresPlacementTest ? 'quiz' : 'calendar_month',
         'ditolak', 'belum_upload' => 'upload_file',
         default => 'assignment_ind',
     };

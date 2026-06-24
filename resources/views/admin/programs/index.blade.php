@@ -55,7 +55,7 @@
                         <th class="px-6 py-4">Jadwal</th>
                         <th class="px-6 py-4">Status</th>
                         <th class="px-6 py-4">Harga</th>
-                        <th class="px-6 py-4">Kuota</th>
+                        <th class="px-6 py-4">Kapasitas</th>
                         <th class="px-6 py-4 text-right">Aksi</th>
                     </tr>
                 </thead>
@@ -88,20 +88,52 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4">
-                                <div class="font-bold text-slate-900">
-                                    {{ $program->registered_users_count }}
-                                    @if($program->quota)
-                                        / {{ $program->quota }}
-                                    @else
-                                        pendaftar
-                                    @endif
-                                </div>
-                                <div class="text-xs font-medium {{ $program->quota && $program->remaining_quota <= 0 ? 'text-red-600' : 'text-slate-500' }}">
-                                    @if($program->quota)
-                                        {{ $program->remaining_quota }} kuota tersisa
-                                    @else
-                                        Tidak dibatasi
-                                    @endif
+                                <div class="space-y-3">
+                                    <div>
+                                        <div class="text-xs font-bold uppercase tracking-wide text-slate-400">Program</div>
+                                        <div class="font-bold text-slate-900">
+                                            {{ $program->registered_users_count }}
+                                            @if($program->quota)
+                                                / {{ $program->quota }}
+                                            @else
+                                                pendaftar
+                                            @endif
+                                        </div>
+                                        <div class="text-xs font-medium {{ $program->quota && $program->remaining_quota <= 0 ? 'text-rose-600' : 'text-slate-500' }}">
+                                            @if($program->quota)
+                                                {{ $program->remaining_quota }} kuota program tersisa
+                                            @else
+                                                Tidak dibatasi
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-lg bg-slate-50 px-3 py-2">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="text-xs font-bold uppercase tracking-wide text-slate-400">Jadwal</span>
+                                            @if($program->schedule_is_full)
+                                                <span class="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">Penuh</span>
+                                            @elseif($program->schedule_total_capacity > 0)
+                                                <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">Tersedia</span>
+                                            @else
+                                                <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">Belum ada</span>
+                                            @endif
+                                        </div>
+                                        <div class="mt-1 font-bold text-slate-900">
+                                            @if($program->schedule_total_capacity > 0)
+                                                {{ $program->schedule_used_capacity }} / {{ $program->schedule_total_capacity }}
+                                            @else
+                                                -
+                                            @endif
+                                        </div>
+                                        <div class="text-xs font-medium {{ $program->schedule_is_full ? 'text-rose-600' : 'text-slate-500' }}">
+                                            @if($program->schedule_total_capacity > 0)
+                                                {{ $program->schedule_remaining_capacity }} kursi jadwal tersisa
+                                            @else
+                                                Buat pilihan jadwal dulu
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4">

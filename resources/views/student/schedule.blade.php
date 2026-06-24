@@ -4,7 +4,19 @@
 @php
     $priceText = $program ? $program->formattedPriceForClassType($auth->class_type) : '-';
     $assignedSchedules = $assignedSchedules ?? collect();
-    $adminWhatsappUrl = 'https://wa.me/6281292538501?text=' . rawurlencode('Halo admin CELL English Course, saya ingin konsultasi jadwal kelas.');
+    $scheduleTemplates = $scheduleTemplates ?? collect();
+    $schedulePreferences = $schedulePreferences ?? collect();
+    $requiresPlacementTest = $requiresPlacementTest ?? true;
+    $dayLabels = $dayLabels ?? [];
+    $adminWhatsappUrl = 'https://wa.me/6281292538501?text=' . rawurlencode('Halo admin CELL English Course, saya ingin konsultasi jadwal belajar.');
+    $mainSchedule = $assignedSchedules->first();
+    $scheduleDays = $assignedSchedules
+        ->map(fn ($schedule) => $dayLabels[$schedule->class_date->isoWeekday()] ?? $schedule->class_date->format('D'))
+        ->unique()
+        ->values()
+        ->join(' & ');
+    $periodStart = $assignedSchedules->min('class_date');
+    $periodEnd = $assignedSchedules->max('class_date');
 @endphp
 
 <main class="min-h-[calc(100vh-4rem)] bg-slate-50 px-6 py-10 md:px-8">
@@ -14,7 +26,7 @@
                 <p class="text-sm font-bold uppercase tracking-wide text-indigo-600">Konsultasi Jadwal</p>
                 <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">Atur Jadwal Belajar Anda</h1>
                 <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                    Jadwal kelas akan disesuaikan bersama pihak CELL English Course berdasarkan level, program, dan ketersediaan waktu Anda.
+                    Jadwal belajar akan disesuaikan bersama pihak CELL English Course berdasarkan level, program, dan ketersediaan waktu Anda.
                 </p>
             </div>
             <a href="{{ route('student.status') }}" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600">
@@ -23,22 +35,34 @@
             </a>
         </section>
 
+        @if(session('success'))
+            <section class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
+                {{ session('success') }}
+            </section>
+        @endif
+
+        @if($errors->any())
+            <section class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
+                {{ $errors->first() }}
+            </section>
+        @endif
+
         <section class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <article class="overflow-hidden rounded-3xl border border-indigo-100 bg-white shadow-xl shadow-slate-900/5">
                 <div class="bg-indigo-600 px-6 py-6 text-white md:px-8">
                     <p class="text-sm font-bold uppercase tracking-wide text-indigo-100">CELL English Course</p>
-                    <h2 class="mt-2 text-3xl font-extrabold">Konsultasi Jadwal Kelas</h2>
-                    <p class="mt-2 text-sm font-semibold text-indigo-100">Placement test selesai, jadwal akan dipilih setelah konsultasi.</p>
+                    <h2 class="mt-2 text-3xl font-extrabold">Konsultasi Jadwal Belajar</h2>
+                    <p class="mt-2 text-sm font-semibold text-indigo-100">{{ $requiresPlacementTest ? 'Placement test selesai, jadwal akan dipilih setelah konsultasi.' : 'Program BIMBEL tidak memerlukan placement test, jadwal akan dipilih setelah konsultasi.' }}</p>
                 </div>
 
                 <div class="grid gap-4 p-6 md:grid-cols-2 md:p-8">
                     <div class="rounded-2xl bg-slate-50 p-5">
                         <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Level Hasil Test</p>
-                        <p class="mt-2 text-2xl font-extrabold text-slate-950">{{ $latestPlacementAttempt->level }}</p>
+                        <p class="mt-2 text-2xl font-extrabold text-slate-950">{{ $requiresPlacementTest ? $latestPlacementAttempt?->level : 'Tidak Diperlukan' }}</p>
                     </div>
                     <div class="rounded-2xl bg-slate-50 p-5">
                         <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Skor Test</p>
-                        <p class="mt-2 text-2xl font-extrabold text-slate-950">{{ $latestPlacementAttempt->correct_answers }}/{{ $latestPlacementAttempt->total_questions }} ({{ $latestPlacementAttempt->score_percentage }}%)</p>
+                        <p class="mt-2 text-2xl font-extrabold text-slate-950">{{ $requiresPlacementTest ? ($latestPlacementAttempt?->correct_answers . '/' . $latestPlacementAttempt?->total_questions . ' (' . $latestPlacementAttempt?->score_percentage . '%)') : 'Tidak Diperlukan' }}</p>
                     </div>
                     <div class="rounded-2xl bg-indigo-50 p-5">
                         <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">Program Dipilih</p>
@@ -55,41 +79,122 @@
 
                 @if($assignedSchedules->isNotEmpty())
                     <div class="border-t border-slate-100 px-6 py-6 md:px-8">
-                        <h3 class="text-lg font-extrabold text-slate-950">Jadwal Anda</h3>
-                        <div class="mt-4 space-y-3">
-                            @foreach($assignedSchedules as $schedule)
-                                <article class="rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
-                                    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                                        <div>
-                                            <p class="text-sm font-bold uppercase tracking-wide text-indigo-500">{{ $schedule->class_date->format('d M Y') }}</p>
-                                            <h4 class="mt-1 text-xl font-extrabold text-slate-950">{{ $schedule->program->name }}</h4>
-                                        @if($schedule->class_type)
-                                            <p class="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-indigo-700">{{ $schedule->class_type }}</p>
-                                        @endif
-                                        </div>
-                                        <div class="rounded-xl bg-white px-4 py-3 text-sm font-extrabold text-indigo-700">
-                                            {{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }}
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 grid gap-3 text-sm font-semibold text-slate-600 md:grid-cols-2">
-                                        <div class="flex items-start gap-2">
-                                            <span class="material-symbols-outlined text-[20px] text-indigo-600">meeting_room</span>
-                                            <span>{{ $schedule->room ?: 'Ruang belum diisi' }}</span>
-                                        </div>
-                                        <div class="flex items-start gap-2">
-                                            <span class="material-symbols-outlined text-[20px] text-indigo-600">person_book</span>
-                                            <span>{{ $schedule->tutor?->name ?: 'Tutor belum ditentukan' }}</span>
-                                        </div>
-                                        @if($schedule->notes)
-                                            <div class="flex items-start gap-2">
-                                                <span class="material-symbols-outlined text-[20px] text-indigo-600">notes</span>
-                                                <span>{{ $schedule->notes }}</span>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </article>
-                            @endforeach
+                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <h3 class="text-lg font-extrabold text-slate-950">Jadwal Belajar Anda</h3>
+                                <p class="mt-1 text-sm text-slate-500">Ringkasan jadwal utama selama periode belajar.</p>
+                            </div>
+                            <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Jadwal Aktif</span>
                         </div>
+
+                        <article class="mt-5 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
+                            <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">Program</p>
+                                    <h4 class="mt-1 text-2xl font-extrabold text-slate-950">{{ $mainSchedule->program?->name ?? '-' }}</h4>
+                                    @if($mainSchedule->class_type)
+                                        <p class="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-indigo-700">{{ $mainSchedule->class_type }}</p>
+                                    @endif
+                                </div>
+                                <div class="rounded-xl bg-white px-4 py-3 text-sm font-extrabold text-indigo-700">
+                                    {{ $mainSchedule->start_time->format('H:i') }} - {{ $mainSchedule->end_time->format('H:i') }}
+                                </div>
+                            </div>
+
+                            <div class="mt-5 grid gap-4 text-sm font-semibold text-slate-700 md:grid-cols-2">
+                                <div class="flex items-start gap-2">
+                                    <span class="material-symbols-outlined text-[20px] text-indigo-600">calendar_month</span>
+                                    <span>{{ $scheduleDays ?: '-' }}</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="material-symbols-outlined text-[20px] text-indigo-600">meeting_room</span>
+                                    <span>{{ $mainSchedule->classRoom?->name ?? $mainSchedule->room ?: 'Ruang belum diisi' }}</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="material-symbols-outlined text-[20px] text-indigo-600">person_book</span>
+                                    <span>{{ $mainSchedule->tutor?->name ?: 'Tutor belum ditentukan' }}</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="material-symbols-outlined text-[20px] text-indigo-600">date_range</span>
+                                    <span>{{ $periodStart?->format('d M Y') }} - {{ $periodEnd?->format('d M Y') }}</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 rounded-xl bg-white/70 px-4 py-3 text-sm font-semibold leading-6 text-slate-600">
+                                Kelas berlangsung 2 kali seminggu selama periode belajar. Setiap pertemuan mengikuti program, ruang, tutor, dan jam yang sama agar jadwal mudah diikuti siswa.
+                            </div>
+                        </article>
+
+                        <div class="mt-6">
+                            <h4 class="text-sm font-extrabold uppercase tracking-wide text-slate-500">Pertemuan Mendatang</h4>
+                            <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                                @foreach($assignedSchedules as $schedule)
+                                    <button type="button"
+                                        class="schedule-detail-button flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm transition hover:border-indigo-300 hover:bg-indigo-50"
+                                        data-title="Pertemuan {{ $loop->iteration }}"
+                                        data-date="{{ $schedule->class_date->format('d M Y') }}"
+                                        data-day="{{ $dayLabels[$schedule->class_date->isoWeekday()] ?? $schedule->class_date->format('D') }}"
+                                        data-time="{{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }}"
+                                        data-program="{{ $schedule->program?->name ?? '-' }}"
+                                        data-class-type="{{ $schedule->class_type ?: '-' }}"
+                                        data-room="{{ $schedule->classRoom?->name ?? $schedule->room ?: 'Ruang belum diisi' }}"
+                                        data-tutor="{{ $schedule->tutor?->name ?: 'Tutor belum ditentukan' }}"
+                                        data-description="{{ $schedule->notes ?: 'Pertemuan belajar sesuai jadwal aktif siswa. Hadir sesuai tanggal, jam, ruang, dan tutor yang sudah ditentukan.' }}">
+                                        <span class="font-bold text-slate-900">{{ $schedule->class_date->format('d M Y') }}</span>
+                                        <span class="inline-flex items-center gap-2 font-extrabold text-indigo-700">
+                                            {{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }}
+                                            <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                                        </span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="border-t border-slate-100 px-6 py-6 md:px-8">
+                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <h3 class="text-lg font-extrabold text-slate-950">Pilih Jadwal Belajar</h3>
+                                <p class="mt-1 text-sm text-slate-500">Pilih satu jadwal belajar dari CELL. Jadwal akan dipakai setelah pembayaran disetujui admin.</p>
+                            </div>
+                            @if($schedulePreferences->where('status', 'pending')->isNotEmpty())
+                                <span class="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Jadwal dipilih</span>
+                            @endif
+                        </div>
+
+                        @if($scheduleTemplates->isNotEmpty())
+                            <form method="POST" action="{{ route('student.schedule.preferences.store') }}" class="mt-5 space-y-3">
+                                @csrf
+                                @foreach($scheduleTemplates as $template)
+                                    @php
+                                        $days = collect($template->days ?? [])->map(fn ($day) => $dayLabels[$day] ?? $day)->join(' & ');
+                                        $isSelected = $schedulePreferences->where('schedule_template_id', $template->id)->where('status', 'pending')->isNotEmpty();
+                                    @endphp
+                                    <label class="flex cursor-pointer items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50">
+                                        <input type="radio" name="schedule_template_id" value="{{ $template->id }}" required class="schedule-preference-radio mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500" @checked($isSelected)>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-sm font-extrabold text-slate-950">{{ $days }}</span>
+                                            <span class="mt-1 block text-sm font-semibold text-indigo-700">{{ $template->start_time->format('H:i') }} - {{ $template->end_time->format('H:i') }}</span>
+                                            <span class="mt-2 block text-xs font-medium text-slate-500">
+                                                {{ $template->classRoom?->name ?? $template->room ?: 'Ruang belum ditentukan' }}{{ $template->tutor ? ' / Tutor: ' . $template->tutor->name : '' }} / Sisa {{ $template->remainingSeats() }} kursi
+                                            </span>
+                                        </span>
+                                    </label>
+                                @endforeach
+
+                                <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <p id="preferenceCounter" class="text-xs font-bold text-slate-500">Pilih satu jadwal belajar.</p>
+                                    <button type="submit" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
+                                        <span class="material-symbols-outlined text-[18px]">send</span>
+                                        Simpan Jadwal
+                                    </button>
+                                </div>
+                            </form>
+                        @else
+                            <div class="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-800">
+                                Belum ada pilihan jadwal belajar untuk program ini. Silakan hubungi admin agar jadwal pilihan dapat dibuat.
+                            </div>
+                        @endif
                     </div>
                 @endif
 
@@ -133,11 +238,11 @@
                         </div>
                         <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
                             <p class="text-sm font-semibold text-slate-500">Skor Test</p>
-                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $latestPlacementAttempt->correct_answers }}/{{ $latestPlacementAttempt->total_questions }} ({{ $latestPlacementAttempt->score_percentage }}%)</p>
+                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $requiresPlacementTest ? ($latestPlacementAttempt?->correct_answers . '/' . $latestPlacementAttempt?->total_questions . ' (' . $latestPlacementAttempt?->score_percentage . '%)') : 'Tidak diperlukan' }}</p>
                         </div>
                         <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
                             <p class="text-sm font-semibold text-slate-500">Rekomendasi</p>
-                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $latestPlacementAttempt->recommended_program }}</p>
+                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $requiresPlacementTest ? $latestPlacementAttempt?->recommended_program : 'Mengikuti program BIMBEL yang dipilih' }}</p>
                         </div>
                     </div>
                 </article>
@@ -148,7 +253,7 @@
                     </div>
                     <h2 class="mt-4 text-lg font-extrabold text-amber-950">{{ $assignedSchedules->isNotEmpty() ? 'Jadwal sudah tersedia' : 'Jadwal belum final' }}</h2>
                     <p class="mt-2 text-sm font-semibold leading-6 text-amber-800">
-                        {{ $assignedSchedules->isNotEmpty() ? 'Silakan ikuti jadwal yang sudah ditentukan admin setelah proses konsultasi.' : 'Pembayaran sudah disetujui dan placement test selesai. Jadwal kelas akan ditentukan setelah konsultasi dengan pihak les.' }}
+                        {{ $assignedSchedules->isNotEmpty() ? 'Silakan ikuti jadwal yang sudah ditentukan admin setelah proses konsultasi.' : 'Pembayaran sudah disetujui dan placement test selesai. Jadwal belajar akan ditentukan setelah konsultasi dengan pihak les.' }}
                     </p>
                 </article>
 
@@ -173,4 +278,125 @@
         </section>
     </div>
 </main>
+
+<div id="scheduleDetailModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 px-4 py-8">
+    <div class="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div class="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+            <div>
+                <p id="modalMeetingTitle" class="text-sm font-bold uppercase tracking-wide text-indigo-600">Detail Pertemuan</p>
+                <h2 id="modalMeetingDate" class="mt-1 text-2xl font-extrabold text-slate-950">-</h2>
+            </div>
+            <button type="button" id="closeScheduleModal" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-500 hover:text-indigo-600" aria-label="Tutup detail pertemuan">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="space-y-4 px-6 py-5">
+            <div class="rounded-xl bg-indigo-50 px-4 py-3">
+                <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">Deskripsi</p>
+                <p id="modalMeetingDescription" class="mt-1 text-sm font-semibold leading-6 text-slate-700">-</p>
+            </div>
+
+            <div class="grid gap-3 text-sm sm:grid-cols-2">
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Hari</p>
+                    <p id="modalMeetingDay" class="mt-1 font-extrabold text-slate-950">-</p>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Jam</p>
+                    <p id="modalMeetingTime" class="mt-1 font-extrabold text-indigo-700">-</p>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Program</p>
+                    <p id="modalMeetingProgram" class="mt-1 font-extrabold text-slate-950">-</p>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Jenis Kelas</p>
+                    <p id="modalMeetingClassType" class="mt-1 font-extrabold text-slate-950">-</p>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Ruang</p>
+                    <p id="modalMeetingRoom" class="mt-1 font-extrabold text-slate-950">-</p>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Tutor</p>
+                    <p id="modalMeetingTutor" class="mt-1 font-extrabold text-slate-950">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const radios = Array.from(document.querySelectorAll('.schedule-preference-radio'));
+        const counter = document.getElementById('preferenceCounter');
+        const modal = document.getElementById('scheduleDetailModal');
+        const closeModalButton = document.getElementById('closeScheduleModal');
+        const detailButtons = Array.from(document.querySelectorAll('.schedule-detail-button'));
+
+        const syncPreferenceLimit = () => {
+            const selected = radios.some((radio) => radio.checked);
+
+            if (counter) {
+                counter.textContent = selected
+                    ? 'Jadwal belajar sudah dipilih.'
+                    : 'Pilih satu jadwal belajar.';
+            }
+        };
+
+        radios.forEach((radio) => radio.addEventListener('change', syncPreferenceLimit));
+        syncPreferenceLimit();
+
+        const modalFields = {
+            title: document.getElementById('modalMeetingTitle'),
+            date: document.getElementById('modalMeetingDate'),
+            day: document.getElementById('modalMeetingDay'),
+            time: document.getElementById('modalMeetingTime'),
+            program: document.getElementById('modalMeetingProgram'),
+            classType: document.getElementById('modalMeetingClassType'),
+            room: document.getElementById('modalMeetingRoom'),
+            tutor: document.getElementById('modalMeetingTutor'),
+            description: document.getElementById('modalMeetingDescription'),
+        };
+
+        function openScheduleModal(button) {
+            modalFields.title.textContent = button.dataset.title || 'Detail Pertemuan';
+            modalFields.date.textContent = button.dataset.date || '-';
+            modalFields.day.textContent = button.dataset.day || '-';
+            modalFields.time.textContent = button.dataset.time || '-';
+            modalFields.program.textContent = button.dataset.program || '-';
+            modalFields.classType.textContent = button.dataset.classType || '-';
+            modalFields.room.textContent = button.dataset.room || '-';
+            modalFields.tutor.textContent = button.dataset.tutor || '-';
+            modalFields.description.textContent = button.dataset.description || '-';
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeScheduleModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        detailButtons.forEach((button) => {
+            button.addEventListener('click', () => openScheduleModal(button));
+        });
+
+        closeModalButton?.addEventListener('click', closeScheduleModal);
+        modal?.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeScheduleModal();
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeScheduleModal();
+            }
+        });
+    });
+</script>
 @endsection

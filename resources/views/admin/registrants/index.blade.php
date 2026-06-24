@@ -46,6 +46,18 @@
         </a>
     </section>
 
+    @if(session('success'))
+        <section class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
+            {{ session('success') }}
+        </section>
+    @endif
+
+    @if($errors->any())
+        <section class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
+            {{ $errors->first() }}
+        </section>
+    @endif
+
     <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
         <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p class="text-sm font-semibold text-slate-500">Total Pendaftar</p>
@@ -183,6 +195,7 @@
                                             <th class="px-6 py-4">Pembayaran</th>
                                             <th class="px-6 py-4">Bukti</th>
                                             <th class="px-6 py-4">Update</th>
+                                            <th class="px-6 py-4 text-right">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
@@ -213,6 +226,20 @@
                                                     @endif
                                                 </td>
                                                 <td class="px-6 py-4 text-slate-500">{{ $user->updated_at?->format('d M Y H:i') }}</td>
+                                                <td class="px-6 py-4">
+                                                    <div class="flex justify-end gap-2">
+                                                        <a href="{{ route('admin.registrants.edit', $user) }}" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-600 hover:text-indigo-600" aria-label="Edit pendaftar">
+                                                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                                                        </a>
+                                                        <form method="POST" action="{{ route('admin.registrants.cancel', $user) }}" onsubmit="return confirm('Batalkan pendaftaran {{ $user->name }}? Akun siswa tetap tersimpan.');">
+                                                            @csrf
+                                                            @method('PATCH')
+                                                            <button type="submit" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-rose-500 hover:text-rose-600" aria-label="Batalkan pendaftaran">
+                                                                <span class="material-symbols-outlined text-[18px]">person_cancel</span>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </tbody>

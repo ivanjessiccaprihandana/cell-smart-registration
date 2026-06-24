@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@php($pageTitle = 'Tambah Jadwal')
+@php($pageTitle = 'Tambah Jadwal Siswa')
 
 @section('content')
 <div class="mx-auto max-w-3xl space-y-5">
@@ -9,7 +9,7 @@
             <a href="{{ route('admin.schedules.index') }}" class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-indigo-600" aria-label="Kembali">
                 <span class="material-symbols-outlined">arrow_back</span>
             </a>
-            <h2 class="text-xl font-extrabold text-slate-950">Tambah Jadwal Kelas</h2>
+            <h2 class="text-xl font-extrabold text-slate-950">Tambah Jadwal Siswa</h2>
         </div>
     </section>
 
@@ -114,11 +114,18 @@
             </div>
 
             <div>
-                <label for="room" class="mb-2 block text-sm font-bold text-slate-700">Ruang / Kelas</label>
-                <input id="room" name="room" type="text" value="{{ old('room') }}"
-                    class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
-                    placeholder="Contoh: Ruang A / Online Zoom" />
-                @error('room')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
+                <label for="class_room_id" class="mb-2 block text-sm font-bold text-slate-700">Ruang Kelas</label>
+                <select id="class_room_id" name="class_room_id"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
+                    <option value="">Belum dipilih</option>
+                    @foreach($classRooms as $room)
+                        <option value="{{ $room->id }}" data-category="{{ $room->category }}" @selected(old('class_room_id') == $room->id)>
+                            {{ $room->name }} - {{ $room->category }} / {{ $room->capacity }} siswa
+                        </option>
+                    @endforeach
+                </select>
+                <p class="mt-2 text-xs font-medium text-slate-500">Ruang akan difilter sesuai kategori program English atau BIMBEL.</p>
+                @error('class_room_id')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
             </div>
 
             <div>
@@ -133,7 +140,7 @@
                 <a href="{{ route('admin.schedules.index') }}" class="inline-flex h-12 items-center justify-center rounded-lg border border-slate-300 px-5 text-sm font-bold text-slate-700 hover:border-indigo-600 hover:text-indigo-600">Batal</a>
                 <button type="submit" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-teal-600 px-6 text-sm font-bold text-white hover:bg-teal-700">
                     <span class="material-symbols-outlined text-[18px]">save</span>
-                    Simpan Jadwal
+                    Simpan Jadwal Siswa
                 </button>
             </div>
         </form>
@@ -145,6 +152,7 @@
         const studentSelect = document.getElementById('user_id');
         const programSelect = document.getElementById('program_id');
         const tutorSelect = document.getElementById('tutor_id');
+        const classRoomSelect = document.getElementById('class_room_id');
         const classTypeWrapper = document.getElementById('classTypeWrapper');
         const classTypeInputs = document.querySelectorAll('input[name="class_type"]');
 
@@ -242,9 +250,35 @@
             }
         }
 
+        function filterRooms() {
+            const selectedProgram = programSelect.options[programSelect.selectedIndex];
+            const programName = selectedProgram?.textContent?.toLowerCase() || '';
+            const expectedCategory = programName.includes('bimbel') ? 'Bimbel' : 'English';
+            let selectedStillVisible = true;
+
+            Array.from(classRoomSelect.options).forEach(function (option) {
+                if (!option.value) {
+                    option.hidden = false;
+                    return;
+                }
+
+                const shouldShow = option.dataset.category === expectedCategory;
+                option.hidden = !shouldShow;
+
+                if (option.selected && !shouldShow) {
+                    selectedStillVisible = false;
+                }
+            });
+
+            if (!selectedStillVisible) {
+                classRoomSelect.value = '';
+            }
+        }
+
         programSelect?.addEventListener('change', toggleClassType);
         programSelect?.addEventListener('change', filterStudents);
         programSelect?.addEventListener('change', filterTutors);
+        programSelect?.addEventListener('change', filterRooms);
         studentSelect?.addEventListener('change', syncFromStudent);
         studentSelect?.addEventListener('change', filterStudents);
         studentSelect?.addEventListener('change', filterTutors);
@@ -256,6 +290,7 @@
         toggleClassType();
         filterStudents();
         filterTutors();
+        filterRooms();
     });
 </script>
 @endsection

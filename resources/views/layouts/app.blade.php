@@ -11,25 +11,34 @@
 <body class="bg-slate-50 text-slate-900 font-sans antialiased">
     @php
         $adminWhatsappNumber = '6281292538501';
-        $adminWhatsappUrl = 'https://wa.me/' . $adminWhatsappNumber . '?text=' . rawurlencode('Halo admin CELL English Course, saya ingin bertanya tentang program dan jadwal kelas.');
+        $adminWhatsappUrl = 'https://wa.me/' . $adminWhatsappNumber . '?text=' . rawurlencode('Halo admin CELL English Course, saya ingin bertanya tentang program dan jadwal belajar.');
+        $authProgram = auth()->check() && auth()->user()->program
+            ? \App\Models\Program::find(auth()->user()->program)
+            : null;
+        $requiresPlacementTest = !$authProgram
+            || !(
+                \Illuminate\Support\Str::lower($authProgram->category ?? '') === 'bimbel'
+                || \Illuminate\Support\Str::startsWith(\Illuminate\Support\Str::lower($authProgram->name), 'bimbel')
+            );
         $hasPlacementAttempt = auth()->check()
             && \App\Models\PlacementTestAttempt::where('user_id', auth()->id())->exists();
         $canAccessPlacementTest = auth()->check()
             && auth()->user()->payment_status === 'diterima'
+            && $requiresPlacementTest
             && !$hasPlacementAttempt;
         $canAccessClassSchedule = auth()->check()
             && auth()->user()->payment_status === 'diterima'
-            && $hasPlacementAttempt;
+            && (!$requiresPlacementTest || $hasPlacementAttempt);
     @endphp
     <header class="sticky top-0 z-50 w-full border-b border-slate-200/70 bg-white/95 backdrop-blur-sm">
         <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 md:px-8">
             <a href="{{ route('home') }}" class="text-xl font-semibold tracking-tight text-indigo-600">CELL English Course</a>
 
             <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-                <a class="hover:text-indigo-600 transition-colors" href="#home">Beranda</a>
-                <a class="hover:text-indigo-600 transition-colors" href="#programs">Program</a>
-                <a class="hover:text-indigo-600 transition-colors" href="#tutors">Profile</a>
-                <a class="hover:text-indigo-600 transition-colors" href="#pricing">Kelas</a>
+                <a class="hover:text-indigo-600 transition-colors" href="{{ route('home') }}#home">Beranda</a>
+                <a class="hover:text-indigo-600 transition-colors" href="{{ route('home') }}#programs">Program</a>
+                <a class="hover:text-indigo-600 transition-colors" href="{{ route('home') }}#tutors">Profile</a>
+                <a class="hover:text-indigo-600 transition-colors" href="{{ route('home') }}#pricing">Kelas</a>
                 <a class="hover:text-indigo-600 transition-colors" href="{{ route('programs.quota') }}">Cek Kuota</a>
                 @auth
                     <a class="hover:text-indigo-600 transition-colors" href="{{ route('student.status') }}">Status Saya</a>
@@ -40,7 +49,7 @@
                         <a class="hover:text-indigo-600 transition-colors" href="{{ route('student.schedule') }}">Konsultasi Jadwal</a>
                     @endif
                 @endauth
-                <a class="hover:text-indigo-600 transition-colors" href="#contact">Kontak</a>
+                <a class="hover:text-indigo-600 transition-colors" href="{{ route('home') }}#contact">Kontak</a>
             </nav>
 
             <div class="flex items-center gap-3">
@@ -64,10 +73,10 @@
                 </summary>
                 <div class="mt-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-900/5">
                     <div class="flex flex-col gap-3 text-sm font-medium text-slate-700">
-                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="#home">Beranda</a>
-                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="#programs">Program</a>
-                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="#tutors">Profile</a>
-                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="#pricing">Kelas</a>
+                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('home') }}#home">Beranda</a>
+                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('home') }}#programs">Program</a>
+                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('home') }}#tutors">Profile</a>
+                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('home') }}#pricing">Kelas</a>
                         <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('programs.quota') }}">Cek Kuota</a>
                         @auth
                             <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('student.status') }}">Status Saya</a>
@@ -78,7 +87,7 @@
                                 <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('student.schedule') }}">Konsultasi Jadwal</a>
                             @endif
                         @endauth
-                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="#contact">Kontak</a>
+                        <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('home') }}#contact">Kontak</a>
                         @guest
                             <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('login') }}">Login</a>
                             <a class="block rounded-xl bg-indigo-600 px-3 py-2 text-center text-white hover:bg-indigo-700" href="{{ route('register') }}">Daftar Sekarang</a>

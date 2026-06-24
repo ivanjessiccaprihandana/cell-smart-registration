@@ -119,8 +119,7 @@
                     <div class="space-y-6">
                         @foreach($questions as $index => $question)
                             <article class="question-card {{ $index === 0 ? '' : 'hidden' }} rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 md:p-8" data-index="{{ $index }}" data-section="{{ $question->section }}">
-                                <span class="inline-flex rounded bg-indigo-50 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-indigo-700">{{ $question->level }}</span>
-                                <h3 class="mt-5 text-xl font-extrabold leading-8 text-slate-950">{{ $question->question_text }}</h3>
+                                <h3 class="text-xl font-extrabold leading-8 text-slate-950">{{ $question->question_text }}</h3>
 
                                 <div class="mt-8 space-y-4">
                                     @foreach($question->options as $optionIndex => $option)

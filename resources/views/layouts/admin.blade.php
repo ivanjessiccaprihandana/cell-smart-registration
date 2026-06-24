@@ -51,7 +51,15 @@
                 </a>
                 <a href="{{ route('admin.schedules.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.schedules.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">calendar_month</span>
-                    Jadwal Kelas
+                    Jadwal Siswa
+                </a>
+                <a href="{{ route('admin.class-rooms.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.class-rooms.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
+                    <span class="material-symbols-outlined text-[20px]">meeting_room</span>
+                    Ruang Kelas
+                </a>
+                <a href="{{ route('admin.schedule-templates.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.schedule-templates.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
+                    <span class="material-symbols-outlined text-[20px]">event_repeat</span>
+                    Pilihan Jadwal
                 </a>
                 <a href="{{ route('home') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 hover:bg-slate-100 hover:text-slate-900">
                     <span class="material-symbols-outlined text-[20px]">public</span>
@@ -110,7 +118,15 @@
                                 </a>
                                 <a href="{{ route('admin.schedules.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.schedules.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">calendar_month</span>
-                                    Jadwal Kelas
+                                    Jadwal Siswa
+                                </a>
+                                <a href="{{ route('admin.class-rooms.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.class-rooms.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
+                                    <span class="material-symbols-outlined text-[20px]">meeting_room</span>
+                                    Ruang Kelas
+                                </a>
+                                <a href="{{ route('admin.schedule-templates.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.schedule-templates.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
+                                    <span class="material-symbols-outlined text-[20px]">event_repeat</span>
+                                    Pilihan Jadwal
                                 </a>
                             </div>
                         </details>

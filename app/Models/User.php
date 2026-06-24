@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'whatsapp', 'address', 'program', 'class_type', 'payment_proof_path', 'payment_status'])]
+#[Fillable(['name', 'email', 'password', 'whatsapp', 'address', 'program', 'class_type', 'payment_proof_path', 'payment_status', 'registration_expires_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -30,6 +30,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'registration_expires_at' => 'datetime',
         ];
     }
 
@@ -44,6 +45,11 @@ class User extends Authenticatable
     public function classSchedules(): HasMany
     {
         return $this->hasMany(ClassSchedule::class);
+    }
+
+    public function schedulePreferences(): HasMany
+    {
+        return $this->hasMany(SchedulePreference::class);
     }
 
     public function placementTestAttempts(): HasMany

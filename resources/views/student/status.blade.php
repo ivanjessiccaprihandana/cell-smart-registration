@@ -11,14 +11,18 @@
     ][$paymentStatus] ?? $paymentStatus;
 
     $paymentStyle = match ($paymentStatus) {
-        'diterima' => ['bg-emerald-50 text-emerald-700 border-emerald-200', 'verified', 'Pendaftaran Anda sudah terverifikasi. Silakan menunggu informasi jadwal kelas dari admin.'],
+        'diterima' => ['bg-emerald-50 text-emerald-700 border-emerald-200', 'verified', 'Pendaftaran Anda sudah terverifikasi. Silakan menunggu informasi jadwal belajar dari admin.'],
         'ditolak' => ['bg-rose-50 text-rose-700 border-rose-200', 'report', 'Bukti pembayaran ditolak. Upload ulang bukti yang lebih jelas atau hubungi admin.'],
         'menunggu_verifikasi' => ['bg-amber-50 text-amber-700 border-amber-200', 'schedule', 'Bukti pembayaran sedang diperiksa oleh admin. Estimasi verifikasi maksimal 1x24 jam.'],
         default => ['bg-slate-50 text-slate-700 border-slate-200', 'upload_file', 'Anda belum mengupload bukti pembayaran. Upload bukti untuk memulai verifikasi.'],
     };
 
     $priceText = $program ? $program->formattedPriceForClassType($auth->class_type) : '-';
-    $canTakePlacement = $paymentStatus === 'diterima';
+    $requiresPlacementTest = $requiresPlacementTest ?? true;
+    $canTakePlacement = $paymentStatus === 'diterima' && $requiresPlacementTest;
+    $paymentDeadline = $paymentStatus === 'belum_upload' && $auth->registration_expires_at
+        ? $auth->registration_expires_at->format('d M Y H:i')
+        : null;
 @endphp
 
 <main class="min-h-[calc(100vh-4rem)] bg-slate-50 px-6 py-10 md:px-8">
@@ -50,6 +54,9 @@
 
                 <div class="mt-6 rounded-xl border px-4 py-4 text-sm font-semibold leading-6 {{ $paymentStyle[0] }}">
                     {{ $paymentStyle[2] }}
+                    @if($paymentDeadline)
+                        <p class="mt-2 font-extrabold">Batas upload bukti: {{ $paymentDeadline }}</p>
+                    @endif
                 </div>
 
                 <div class="mt-6 divide-y divide-slate-100 rounded-xl border border-slate-100">
@@ -97,7 +104,7 @@
                             Cetak Invoice
                         </a>
                     @else
-                        <a href="{{ route('programs.index') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600">
+                        <a href="{{ route('programs.change') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600">
                             <span class="material-symbols-outlined text-[18px]">edit</span>
                             Ubah Program
                         </a>
@@ -119,14 +126,18 @@
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <p class="text-sm font-bold text-slate-500">Placement Test</p>
-                        <h2 class="mt-2 text-2xl font-extrabold text-slate-950">{{ $latestPlacementAttempt?->level ?? 'Belum Dikerjakan' }}</h2>
+                        <h2 class="mt-2 text-2xl font-extrabold text-slate-950">{{ !$requiresPlacementTest ? 'Tidak Diperlukan' : ($latestPlacementAttempt?->level ?? 'Belum Dikerjakan') }}</h2>
                     </div>
                     <div class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
                         <span class="material-symbols-outlined">quiz</span>
                     </div>
                 </div>
 
-                @if($latestPlacementAttempt)
+                @if(!$requiresPlacementTest)
+                    <div class="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-semibold leading-6 text-emerald-800">
+                        Program BIMBEL tidak memakai placement test. Setelah pembayaran disetujui, silakan lanjut konsultasi jadwal dengan admin.
+                    </div>
+                @elseif($latestPlacementAttempt)
                     <div class="mt-6 grid gap-3 sm:grid-cols-3">
                         <div class="rounded-xl bg-slate-50 p-4">
                             <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Skor</p>
@@ -161,7 +172,16 @@
                 @endif
 
                 <div class="mt-6 grid gap-3 sm:grid-cols-2">
-                    @if($canTakePlacement)
+                    @if(!$requiresPlacementTest && $paymentStatus === 'diterima')
+                        <a href="{{ route('student.schedule') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
+                            <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+                            Konsultasi Jadwal
+                        </a>
+                        <span class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-5 text-sm font-bold text-emerald-700">
+                            <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                            Test Tidak Perlu
+                        </span>
+                    @elseif($canTakePlacement)
                         <a href="{{ route('placement-test') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
                             <span class="material-symbols-outlined text-[18px]">visibility</span>
                             {{ $latestPlacementAttempt ? 'Lihat Hasil' : 'Mulai Test' }}

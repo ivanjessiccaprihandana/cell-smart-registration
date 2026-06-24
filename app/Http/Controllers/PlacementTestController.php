@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Program;
 use App\Models\PlacementQuestion;
 use App\Models\PlacementTestAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class PlacementTestController extends Controller
 {
@@ -99,7 +101,7 @@ class PlacementTestController extends Controller
         return redirect()
             ->route('student.schedule')
             ->with('placement_attempt_id', $attempt->id)
-            ->with('success', 'Placement test berhasil dikirim. Silakan konsultasi jadwal kelas dengan admin.');
+            ->with('success', 'Placement test berhasil dikirim. Silakan konsultasi jadwal belajar dengan admin.');
     }
 
     private function placementLevel(int $scorePercentage): array
@@ -130,6 +132,22 @@ class PlacementTestController extends Controller
                 ->withErrors(['placement_test' => 'Placement test baru bisa dikerjakan setelah pembayaran disetujui admin.']);
         }
 
+        $program = Program::find($user->program);
+
+        if ($program && !$this->programRequiresPlacementTest($program)) {
+            return redirect()
+                ->route('student.schedule')
+                ->with('success', 'Program BIMBEL tidak memerlukan placement test. Silakan lanjut konsultasi jadwal.');
+        }
+
         return null;
+    }
+
+    private function programRequiresPlacementTest(Program $program): bool
+    {
+        return !(
+            Str::lower($program->category ?? '') === 'bimbel'
+            || Str::startsWith(Str::lower($program->name), 'bimbel')
+        );
     }
 }
