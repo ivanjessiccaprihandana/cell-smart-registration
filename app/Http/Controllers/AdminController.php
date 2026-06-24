@@ -866,7 +866,12 @@ class AdminController extends Controller
             'tutor_id' => ['nullable', Rule::exists('tutors', 'id')],
             'class_type' => ['nullable', Rule::in(array_keys($this->classTypes()))],
             'level' => ['nullable', Rule::in(array_keys($this->placementLevels()))],
-            'days' => ['required', 'array', 'size:2'],
+            'batch_name' => ['nullable', 'string', 'max:255'],
+            'registration_start_date' => ['nullable', 'date'],
+            'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
+            'learning_start_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
+            'learning_end_date' => ['nullable', 'date', 'after_or_equal:learning_start_date'],
+            'days' => ['required', 'array', 'min:1', 'max:2'],
             'days.*' => ['required', 'integer', Rule::in(array_keys($this->dayLabels()))],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
@@ -886,13 +891,14 @@ class AdminController extends Controller
             ->values()
             ->all();
 
-        if (count($validated['days']) !== 2) {
+        if (count($validated['days']) < 1 || count($validated['days']) > 2) {
             throw ValidationException::withMessages([
-                'days' => 'Pilih tepat 2 hari berbeda untuk pilihan jadwal.',
+                'days' => 'Pilih 1 hari untuk sesi offline atau 2 hari untuk kelas mingguan.',
             ]);
         }
 
         $validated['class_type'] = $usesClassType ? ($validated['class_type'] ?? 'Reguler') : null;
+        $validated['batch_name'] = $validated['batch_name'] ?? null;
         $classRoom = $this->validatedClassRoom($validated['class_room_id'] ?? null, $program);
         $validated['tutor_id'] = $validated['tutor_id'] ?? null;
         $validated['level'] = $validated['level'] ?? null;
@@ -904,6 +910,17 @@ class AdminController extends Controller
         $validated['is_active'] = $request->boolean('is_active');
 
         if ($validated['is_active']) {
+            $currentLearningStart = $validated['learning_start_date'] ?? null;
+            $currentLearningEnd = $validated['learning_end_date'] ?? null;
+            $periodsOverlap = function (ScheduleTemplate $template) use ($currentLearningStart, $currentLearningEnd): bool {
+                if (!$currentLearningStart || !$currentLearningEnd || !$template->learning_start_date || !$template->learning_end_date) {
+                    return true;
+                }
+
+                return $template->learning_start_date->toDateString() <= $currentLearningEnd
+                    && $template->learning_end_date->toDateString() >= $currentLearningStart;
+            };
+
             $conflictingTemplate = ScheduleTemplate::query()
                 ->where('is_active', true)
                 ->where('class_room_id', $validated['class_room_id'])
@@ -911,10 +928,11 @@ class AdminController extends Controller
                 ->where('end_time', '>', $validated['start_time'])
                 ->when($currentTemplate, fn ($query) => $query->whereKeyNot($currentTemplate->id))
                 ->get()
-                ->first(function (ScheduleTemplate $template) use ($validated) {
+                ->first(function (ScheduleTemplate $template) use ($validated, $periodsOverlap) {
                     $templateDays = collect($template->days ?? [])->map(fn ($day) => (int) $day)->all();
 
-                    return count(array_intersect($templateDays, $validated['days'])) > 0;
+                    return count(array_intersect($templateDays, $validated['days'])) > 0
+                        && $periodsOverlap($template);
                 });
 
             if ($conflictingTemplate) {
@@ -957,10 +975,12 @@ class AdminController extends Controller
         return $dates;
     }
 
-    private function createMonthlySchedulesFromTemplate(User $user, ScheduleTemplate $template, string $startDate): int
+    private function createMonthlySchedulesFromTemplate(User $user, ScheduleTemplate $template, string $startDate, ?string $endDate = null): int
     {
         $startDate = \Illuminate\Support\Carbon::parse($startDate)->startOfDay();
-        $endDate = $startDate->copy()->addMonth()->subDay();
+        $endDate = $endDate
+            ? \Illuminate\Support\Carbon::parse($endDate)->startOfDay()
+            : $startDate->copy()->addMonth()->subDay();
         $dates = $this->datesForTemplateDays($startDate, $endDate, $template->days ?? []);
 
         foreach ($dates as $date) {
@@ -974,7 +994,7 @@ class AdminController extends Controller
                 'class_room_id' => $template->class_room_id,
                 'program_id' => $template->program_id,
                 'class_type' => $template->class_type,
-                'session_name' => 'Jadwal Belajar',
+                'session_name' => $template->batch_name ?: 'Jadwal Belajar',
                 'end_time' => $template->end_time->format('H:i'),
                 'room' => $template->room,
                 'max_students' => $template->max_students,
@@ -997,7 +1017,10 @@ class AdminController extends Controller
             return;
         }
 
-        $this->createMonthlySchedulesFromTemplate($user, $preference->scheduleTemplate, now()->toDateString());
+        $learningStartDate = $preference->scheduleTemplate->learning_start_date?->toDateString() ?? now()->toDateString();
+        $learningEndDate = $preference->scheduleTemplate->learning_end_date?->toDateString();
+
+        $this->createMonthlySchedulesFromTemplate($user, $preference->scheduleTemplate, $learningStartDate, $learningEndDate);
 
         SchedulePreference::where('user_id', $user->id)
             ->where('status', 'pending')

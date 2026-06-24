@@ -14,6 +14,11 @@ class ScheduleTemplate extends Model
         'class_room_id',
         'class_type',
         'level',
+        'batch_name',
+        'registration_start_date',
+        'registration_end_date',
+        'learning_start_date',
+        'learning_end_date',
         'days',
         'start_time',
         'end_time',
@@ -25,6 +30,10 @@ class ScheduleTemplate extends Model
 
     protected $casts = [
         'days' => 'array',
+        'registration_start_date' => 'date',
+        'registration_end_date' => 'date',
+        'learning_start_date' => 'date',
+        'learning_end_date' => 'date',
         'start_time' => 'datetime:H:i',
         'end_time' => 'datetime:H:i',
         'max_students' => 'integer',

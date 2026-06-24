@@ -44,6 +44,15 @@
     </div>
 
     <div>
+        <label for="batch_name" class="mb-2 block text-sm font-bold text-slate-700">Nama Batch</label>
+        <input id="batch_name" name="batch_name" type="text" value="{{ old('batch_name', $scheduleTemplate->batch_name ?? '') }}"
+            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
+            placeholder="Contoh: Batch Juli 2026">
+        <p class="mt-2 text-xs font-medium text-slate-500">Dipakai untuk membedakan periode kelas yang bisa dipilih siswa.</p>
+        @error('batch_name')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
+    </div>
+
+    <div>
         <label for="tutor_id" class="mb-2 block text-sm font-bold text-slate-700">Tutor</label>
         <select id="tutor_id" name="tutor_id"
             class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
@@ -58,6 +67,43 @@
     </div>
 </div>
 
+<div class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div>
+            <label for="registration_start_date" class="mb-2 block text-sm font-bold text-slate-700">Mulai Pendaftaran</label>
+            <input id="registration_start_date" name="registration_start_date" type="date"
+                value="{{ old('registration_start_date', $scheduleTemplate?->registration_start_date?->format('Y-m-d')) }}"
+                class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
+            @error('registration_start_date')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
+        </div>
+
+        <div>
+            <label for="registration_end_date" class="mb-2 block text-sm font-bold text-slate-700">Akhir Pendaftaran</label>
+            <input id="registration_end_date" name="registration_end_date" type="date"
+                value="{{ old('registration_end_date', $scheduleTemplate?->registration_end_date?->format('Y-m-d')) }}"
+                class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
+            @error('registration_end_date')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
+        </div>
+
+        <div>
+            <label for="learning_start_date" class="mb-2 block text-sm font-bold text-slate-700">Mulai Belajar</label>
+            <input id="learning_start_date" name="learning_start_date" type="date"
+                value="{{ old('learning_start_date', $scheduleTemplate?->learning_start_date?->format('Y-m-d')) }}"
+                class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
+            @error('learning_start_date')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
+        </div>
+
+        <div>
+            <label for="learning_end_date" class="mb-2 block text-sm font-bold text-slate-700">Akhir Belajar</label>
+            <input id="learning_end_date" name="learning_end_date" type="date"
+                value="{{ old('learning_end_date', $scheduleTemplate?->learning_end_date?->format('Y-m-d')) }}"
+                class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
+            @error('learning_end_date')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
+        </div>
+    </div>
+    <p class="mt-3 text-xs font-medium leading-5 text-slate-500">Jika tanggal batch diisi, siswa hanya bisa memilih jadwal ini selama periode pendaftaran. Setelah pembayaran diterima, jadwal siswa dibuat mengikuti periode belajar.</p>
+</div>
+
 <div class="mt-6">
     <label class="mb-2 block text-sm font-bold text-slate-700">Hari Belajar</label>
     <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -68,7 +114,7 @@
             </label>
         @endforeach
     </div>
-    <p class="mt-2 text-xs font-medium text-slate-500">Pilih tepat 2 hari. Sistem akan membuat jadwal 2 kali seminggu selama 1 bulan.</p>
+    <p class="mt-2 text-xs font-medium text-slate-500">Pilih 1 hari untuk sesi offline TOEIC/TOEFL, atau 2 hari untuk kelas mingguan.</p>
     @error('days')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
     @error('days.*')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
 </div>

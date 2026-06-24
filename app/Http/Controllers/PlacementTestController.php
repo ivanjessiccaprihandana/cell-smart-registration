@@ -137,7 +137,7 @@ class PlacementTestController extends Controller
         if ($program && !$this->programRequiresPlacementTest($program)) {
             return redirect()
                 ->route('student.schedule')
-                ->with('success', 'Program BIMBEL tidak memerlukan placement test. Silakan lanjut konsultasi jadwal.');
+                ->with('success', 'Program ini tidak memerlukan placement test. Silakan lanjut konsultasi jadwal.');
         }
 
         return null;
@@ -145,9 +145,14 @@ class PlacementTestController extends Controller
 
     private function programRequiresPlacementTest(Program $program): bool
     {
+        $category = Str::lower($program->category ?? '');
+        $name = Str::lower($program->name);
+
         return !(
-            Str::lower($program->category ?? '') === 'bimbel'
-            || Str::startsWith(Str::lower($program->name), 'bimbel')
+            $category === 'bimbel'
+            || $category === 'test preparation'
+            || Str::startsWith($name, 'bimbel')
+            || in_array($name, ['toeic', 'toefl'], true)
         );
     }
 }

@@ -19,7 +19,7 @@ class ProgramSeeder extends Seeder
             'English for Kids' => [
                 'sort' => 10,
                 'description' => 'Program Bahasa Inggris untuk anak usia 6-12 tahun.',
-                'quota' => 20,
+                'quota' => 17,
                 'price' => 750000,
                 'private_price' => 1200000,
                 'conversation_price' => 950000,
@@ -27,7 +27,7 @@ class ProgramSeeder extends Seeder
             'English for Teens' => [
                 'sort' => 20,
                 'description' => 'Program Bahasa Inggris untuk remaja usia 13-18 tahun.',
-                'quota' => 18,
+                'quota' => 17,
                 'price' => 850000,
                 'private_price' => 1350000,
                 'conversation_price' => 1100000,
@@ -35,7 +35,7 @@ class ProgramSeeder extends Seeder
             'English for Adult' => [
                 'sort' => 30,
                 'description' => 'Program Bahasa Inggris untuk dewasa dan profesional.',
-                'quota' => 15,
+                'quota' => 17,
                 'price' => 950000,
                 'private_price' => 1500000,
                 'conversation_price' => 1250000,
@@ -63,13 +63,13 @@ class ProgramSeeder extends Seeder
         }
 
         foreach ([
-            ['English Conversation', $english->id, 'Bahasa Inggris', 16, 1200000, 'Latihan percakapan agar siswa lebih percaya diri berbicara Bahasa Inggris.'],
-            ['TOEIC', $testPrep->id, 'Test Preparation', 12, 2499000, 'Persiapan TOEIC dengan latihan soal dan strategi pengerjaan.'],
-            ['TOEFL', $testPrep->id, 'Test Preparation', 12, 2499000, 'Persiapan TOEFL untuk kebutuhan akademik dan tes kemampuan Bahasa Inggris.'],
-            ['BIMBEL TK', $bimbel->id, 'BIMBEL', 10, 500000, 'Pendampingan belajar sekolah untuk jenjang TK.'],
-            ['BIMBEL SD', $bimbel->id, 'BIMBEL', 15, 600000, 'Pendampingan belajar sekolah untuk jenjang SD.'],
-            ['BIMBEL SMP', $bimbel->id, 'BIMBEL', 15, 700000, 'Pendampingan belajar sekolah untuk jenjang SMP.'],
-            ['BIMBEL SMA', $bimbel->id, 'BIMBEL', 15, 800000, 'Pendampingan belajar sekolah untuk jenjang SMA.'],
+            ['English Conversation', $english->id, 'Bahasa Inggris', 8, 1200000, 'Latihan percakapan agar siswa lebih percaya diri berbicara Bahasa Inggris.'],
+            ['TOEIC', $testPrep->id, 'Test Preparation', 24, 2499000, 'Persiapan dan simulasi TOEIC offline dengan latihan soal dan strategi pengerjaan.'],
+            ['TOEFL', $testPrep->id, 'Test Preparation', 24, 2499000, 'Persiapan dan simulasi TOEFL offline untuk kebutuhan akademik dan tes kemampuan Bahasa Inggris.'],
+            ['BIMBEL TK', $bimbel->id, 'BIMBEL', 8, 500000, 'Pendampingan belajar sekolah untuk jenjang TK.'],
+            ['BIMBEL SD', $bimbel->id, 'BIMBEL', 8, 600000, 'Pendampingan belajar sekolah untuk jenjang SD.'],
+            ['BIMBEL SMP', $bimbel->id, 'BIMBEL', 8, 700000, 'Pendampingan belajar sekolah untuk jenjang SMP.'],
+            ['BIMBEL SMA', $bimbel->id, 'BIMBEL', 8, 800000, 'Pendampingan belajar sekolah untuk jenjang SMA.'],
         ] as [$name, $categoryId, $category, $quota, $price, $description]) {
             Program::updateOrCreate(
                 ['name' => $name],

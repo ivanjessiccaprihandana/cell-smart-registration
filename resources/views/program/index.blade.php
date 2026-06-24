@@ -110,6 +110,10 @@
                 'program_id' => (string) $template->program_id,
                 'class_type' => $template->class_type,
                 'level' => $template->level,
+                'batch_name' => $template->batch_name ?: 'Batch berjalan',
+                'learning_period' => $template->learning_start_date && $template->learning_end_date
+                    ? $template->learning_start_date->format('d M Y') . ' - ' . $template->learning_end_date->format('d M Y')
+                    : 'Periode belajar 1 bulan',
                 'days' => $days,
                 'time' => $template->start_time->format('H:i') . ' - ' . $template->end_time->format('H:i'),
                 'room' => $template->classRoom?->name ?? $template->room ?: 'Ruang belum ditentukan',
@@ -754,7 +758,7 @@
                 radio.required = !template.is_full;
                 radio.disabled = Boolean(template.is_full);
                 radio.className = 'mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500';
-                radio.dataset.label = `${template.days}, ${template.time}`;
+                radio.dataset.label = `${template.batch_name} - ${template.days}, ${template.time}`;
                 radio.checked = !template.is_full && selectedId === template.id;
                 radio.addEventListener('change', syncScheduleLimit);
 
@@ -763,11 +767,11 @@
 
                 const title = document.createElement('span');
                 title.className = 'block font-bold text-slate-900';
-                title.textContent = `${template.days}, ${template.time}${template.is_full ? ' - Penuh' : ''}`;
+                title.textContent = `${template.batch_name} - ${template.days}, ${template.time}${template.is_full ? ' - Penuh' : ''}`;
 
                 const detail = document.createElement('span');
                 detail.className = 'mt-1 block text-xs font-medium leading-5 text-slate-500';
-                detail.textContent = `${template.room}${template.tutor ? ' / Tutor: ' + template.tutor : ''}${template.level ? ' / Level: ' + template.level : ''} / ${template.remaining_seats} dari ${template.max_students} kursi tersedia`;
+                detail.textContent = `${template.learning_period} / ${template.room}${template.tutor ? ' / Tutor: ' + template.tutor : ''}${template.level ? ' / Level: ' + template.level : ''} / ${template.remaining_seats} dari ${template.max_students} kursi tersedia`;
                 if (template.is_full) {
                     label.classList.add('cursor-not-allowed', 'opacity-70');
                     label.classList.remove('cursor-pointer');

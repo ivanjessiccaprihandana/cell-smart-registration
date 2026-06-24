@@ -245,6 +245,21 @@ class ProgramController extends Controller
             'currentScheduleTemplateId' => $currentScheduleTemplateId ? (string) $currentScheduleTemplateId : '',
             'scheduleTemplates' => ScheduleTemplate::with(['program', 'tutor', 'classRoom', 'preferences'])
                 ->where('is_active', true)
+                ->where(function ($query) {
+                    $query
+                        ->whereNull('registration_start_date')
+                        ->orWhereDate('registration_start_date', '<=', now()->toDateString());
+                })
+                ->where(function ($query) {
+                    $query
+                        ->whereNull('registration_end_date')
+                        ->orWhereDate('registration_end_date', '>=', now()->toDateString());
+                })
+                ->where(function ($query) {
+                    $query
+                        ->whereNull('learning_end_date')
+                        ->orWhereDate('learning_end_date', '>=', now()->toDateString());
+                })
                 ->orderBy('program_id')
                 ->orderBy('start_time')
                 ->get(),
@@ -374,7 +389,12 @@ public function store(Request $request)
         'registration_expires_at' => now()->addHours(12),
     ]);
 
-    $period = $this->monthlyEnrollmentPeriod($program);
+    $selectedScheduleTemplate = $selectedScheduleTemplateId
+        ? ScheduleTemplate::find($selectedScheduleTemplateId)
+        : null;
+    $period = $selectedScheduleTemplate
+        ? $this->enrollmentPeriodForScheduleTemplate($program, $selectedScheduleTemplate)
+        : $this->monthlyEnrollmentPeriod($program);
 
     ProgramEnrollment::query()
         ->where('user_id', $user->id)
@@ -713,6 +733,21 @@ public function store(Request $request)
         return ScheduleTemplate::with(['program', 'tutor', 'classRoom', 'preferences'])
             ->where('is_active', true)
             ->where('program_id', $program->id)
+            ->where(function ($query) {
+                $query
+                    ->whereNull('registration_start_date')
+                    ->orWhereDate('registration_start_date', '<=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query
+                    ->whereNull('registration_end_date')
+                    ->orWhereDate('registration_end_date', '>=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query
+                    ->whereNull('learning_end_date')
+                    ->orWhereDate('learning_end_date', '>=', now()->toDateString());
+            })
             ->where(function ($query) use ($user) {
                 $query
                     ->whereNull('class_type')
@@ -734,6 +769,21 @@ public function store(Request $request)
         $templates = ScheduleTemplate::with('preferences')
             ->where('is_active', true)
             ->where('program_id', $program->id)
+            ->where(function ($query) {
+                $query
+                    ->whereNull('registration_start_date')
+                    ->orWhereDate('registration_start_date', '<=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query
+                    ->whereNull('registration_end_date')
+                    ->orWhereDate('registration_end_date', '>=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query
+                    ->whereNull('learning_end_date')
+                    ->orWhereDate('learning_end_date', '>=', now()->toDateString());
+            })
             ->where(function ($query) use ($classType) {
                 $query
                     ->whereNull('class_type')
@@ -767,9 +817,14 @@ public function store(Request $request)
 
     private function programRequiresPlacementTest(Program $program): bool
     {
+        $category = Str::lower($program->category ?? '');
+        $name = Str::lower($program->name);
+
         return !(
-            Str::lower($program->category ?? '') === 'bimbel'
-            || Str::startsWith(Str::lower($program->name), 'bimbel')
+            $category === 'bimbel'
+            || $category === 'test preparation'
+            || Str::startsWith($name, 'bimbel')
+            || in_array($name, ['toeic', 'toefl'], true)
         );
     }
 
@@ -783,6 +838,18 @@ public function store(Request $request)
             'start_date' => $startDate->toDateString(),
             'end_date' => $startDate->copy()->addMonth()->toDateString(),
         ];
+    }
+
+    private function enrollmentPeriodForScheduleTemplate(Program $program, ScheduleTemplate $template): array
+    {
+        if ($template->learning_start_date && $template->learning_end_date) {
+            return [
+                'start_date' => $template->learning_start_date->toDateString(),
+                'end_date' => $template->learning_end_date->toDateString(),
+            ];
+        }
+
+        return $this->monthlyEnrollmentPeriod($program);
     }
 
     /**

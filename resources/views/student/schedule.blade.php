@@ -52,7 +52,7 @@
                 <div class="bg-indigo-600 px-6 py-6 text-white md:px-8">
                     <p class="text-sm font-bold uppercase tracking-wide text-indigo-100">CELL English Course</p>
                     <h2 class="mt-2 text-3xl font-extrabold">Konsultasi Jadwal Belajar</h2>
-                    <p class="mt-2 text-sm font-semibold text-indigo-100">{{ $requiresPlacementTest ? 'Placement test selesai, jadwal akan dipilih setelah konsultasi.' : 'Program BIMBEL tidak memerlukan placement test, jadwal akan dipilih setelah konsultasi.' }}</p>
+                    <p class="mt-2 text-sm font-semibold text-indigo-100">{{ $requiresPlacementTest ? 'Placement test selesai, jadwal akan dipilih setelah konsultasi.' : 'Program ini tidak memerlukan placement test, jadwal akan dipilih setelah konsultasi.' }}</p>
                 </div>
 
                 <div class="grid gap-4 p-6 md:grid-cols-2 md:p-8">
@@ -242,7 +242,7 @@
                         </div>
                         <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
                             <p class="text-sm font-semibold text-slate-500">Rekomendasi</p>
-                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $requiresPlacementTest ? $latestPlacementAttempt?->recommended_program : 'Mengikuti program BIMBEL yang dipilih' }}</p>
+                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $requiresPlacementTest ? $latestPlacementAttempt?->recommended_program : 'Mengikuti program yang dipilih' }}</p>
                         </div>
                     </div>
                 </article>

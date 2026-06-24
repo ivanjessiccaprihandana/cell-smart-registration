@@ -23,9 +23,13 @@
     };
     $proofUrl = $auth->payment_proof_path ? \Illuminate\Support\Facades\Storage::url($auth->payment_proof_path) : null;
     $priceText = $program->formattedPriceForClassType($auth->class_type, 'Hubungi Admin');
+    $programCategory = \Illuminate\Support\Str::lower($program->category ?? '');
+    $programName = \Illuminate\Support\Str::lower($program->name ?? '');
     $requiresPlacementTest = !(
-        \Illuminate\Support\Str::lower($program->category ?? '') === 'bimbel'
-        || \Illuminate\Support\Str::startsWith(\Illuminate\Support\Str::lower($program->name), 'bimbel')
+        $programCategory === 'bimbel'
+        || $programCategory === 'test preparation'
+        || \Illuminate\Support\Str::startsWith($programName, 'bimbel')
+        || in_array($programName, ['toeic', 'toefl'], true)
     );
     $nextStepText = $requiresPlacementTest
         ? 'Setelah pembayaran disetujui, placement test akan terbuka.'

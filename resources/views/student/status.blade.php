@@ -135,7 +135,7 @@
 
                 @if(!$requiresPlacementTest)
                     <div class="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-semibold leading-6 text-emerald-800">
-                        Program BIMBEL tidak memakai placement test. Setelah pembayaran disetujui, silakan lanjut konsultasi jadwal dengan admin.
+                        Program ini tidak memakai placement test. Setelah pembayaran disetujui, silakan lanjut konsultasi jadwal dengan admin.
                     </div>
                 @elseif($latestPlacementAttempt)
                     <div class="mt-6 grid gap-3 sm:grid-cols-3">

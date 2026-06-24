@@ -68,6 +68,7 @@
                 <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-6 py-4">Program</th>
+                        <th class="px-6 py-4">Batch</th>
                         <th class="px-6 py-4">Hari & Jam</th>
                         <th class="px-6 py-4">Tutor</th>
                         <th class="px-6 py-4">Status</th>
@@ -88,6 +89,21 @@
                                         <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700">{{ $template->level }}</span>
                                     @endif
                                 </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="font-bold text-slate-900">{{ $template->batch_name ?: 'Batch berjalan' }}</p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">
+                                    Daftar:
+                                    {{ $template->registration_start_date?->format('d M Y') ?: '-' }}
+                                    -
+                                    {{ $template->registration_end_date?->format('d M Y') ?: '-' }}
+                                </p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">
+                                    Belajar:
+                                    {{ $template->learning_start_date?->format('d M Y') ?: '-' }}
+                                    -
+                                    {{ $template->learning_end_date?->format('d M Y') ?: '-' }}
+                                </p>
                             </td>
                             <td class="px-6 py-4">
                                 <p class="font-bold text-slate-900">{{ $days }}</p>
@@ -119,7 +135,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-sm font-semibold text-slate-500">
+                            <td colspan="6" class="px-6 py-12 text-center text-sm font-semibold text-slate-500">
                                 {{ $selectedStatus === 'active' ? 'Belum ada pilihan jadwal aktif.' : 'Belum ada pilihan jadwal pada filter ini.' }}
                             </td>
                         </tr>

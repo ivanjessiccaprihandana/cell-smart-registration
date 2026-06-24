@@ -15,10 +15,14 @@
         $authProgram = auth()->check() && auth()->user()->program
             ? \App\Models\Program::find(auth()->user()->program)
             : null;
+        $authProgramCategory = \Illuminate\Support\Str::lower($authProgram->category ?? '');
+        $authProgramName = \Illuminate\Support\Str::lower($authProgram->name ?? '');
         $requiresPlacementTest = !$authProgram
             || !(
-                \Illuminate\Support\Str::lower($authProgram->category ?? '') === 'bimbel'
-                || \Illuminate\Support\Str::startsWith(\Illuminate\Support\Str::lower($authProgram->name), 'bimbel')
+                $authProgramCategory === 'bimbel'
+                || $authProgramCategory === 'test preparation'
+                || \Illuminate\Support\Str::startsWith($authProgramName, 'bimbel')
+                || in_array($authProgramName, ['toeic', 'toefl'], true)
             );
         $hasPlacementAttempt = auth()->check()
             && \App\Models\PlacementTestAttempt::where('user_id', auth()->id())->exists();
