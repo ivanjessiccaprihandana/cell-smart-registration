@@ -14,6 +14,7 @@
     $selectedProgramModel = $selectedProgramModel ?? $programs->firstWhere('id', $selectedProgram);
     $hasSelectedProgram = filled($selectedProgram) && $selectedProgramModel;
     $shouldLockProgram = $isProgramLocked && $selectedProgramModel;
+    $shouldShowSelectedProgramSummary = $hasSelectedProgram;
     $programNameMatches = fn (string $actualName, string $expectedName) => \Illuminate\Support\Str::lower($actualName) === \Illuminate\Support\Str::lower($expectedName);
     $usesClassType = fn (string $name) => collect($classTypeProgramNames)
             ->contains(fn ($programName) => $programNameMatches($name, $programName));
@@ -220,10 +221,10 @@
                                     Tetap Pakai Pilihan Ini
                                     <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
                                 </a>
-                                <button id="editChoiceButton" type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-3 text-sm font-bold text-indigo-700 hover:border-indigo-600">
+                                <a href="{{ route('programs.change') }}" class="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-3 text-sm font-bold text-indigo-700 hover:border-indigo-600">
                                     <span class="material-symbols-outlined text-[20px]">edit</span>
                                     Ubah Pilihan
-                                </button>
+                                </a>
                             </div>
                         </div>
                     @endif
@@ -279,22 +280,38 @@
                         </div>
 
                         <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                            <label for="program" class="mb-2 block text-sm font-semibold text-slate-800">Pilih Program</label>
+                            <label for="program" class="mb-2 block text-sm font-semibold text-slate-800">
+                                {{ $shouldShowSelectedProgramSummary ? 'Program Dipilih' : 'Pilih Program' }}
+                            </label>
                             <div class="relative">
-                                @if($shouldLockProgram && $hasSelectedProgram)
+                                @if($shouldShowSelectedProgramSummary)
                                     @php
                                         $quotaLabel = $selectedProgramModel->quota ? $selectedProgramModel->remaining_quota . ' kuota tersisa' : 'kuota tidak dibatasi';
                                         $priceLabel = $selectedProgramModel->formattedPriceForClassType(null, 'hubungi admin');
                                     @endphp
-                                    <input id="program" type="text" value="{{ $selectedProgramModel->name }} " readonly
+                                    <input id="program" name="program" type="hidden" value="{{ $selectedProgramModel->id }}"
                                         data-program-id="{{ $selectedProgramModel->id }}"
                                         data-program-name="{{ $selectedProgramModel->name }}"
                                         data-class-type="{{ $usesClassType($selectedProgramModel->name) ? '1' : '0' }}"
                                         data-price-regular="{{ $variantPrice($selectedProgramModel, 'Reguler') }}"
                                         data-price-private="{{ $variantPrice($selectedProgramModel, 'Private') }}"
-                                        data-price-conversation="{{ $variantPrice($selectedProgramModel, 'Conversation') }}"
-                                        class="w-full rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 pr-11 text-sm text-slate-600 outline-none" />
-                                    <span class="material-symbols-outlined pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[20px] text-indigo-600">lock</span>
+                                        data-price-conversation="{{ $variantPrice($selectedProgramModel, 'Conversation') }}" />
+                                    <div class="rounded-lg border border-slate-200 bg-white px-4 py-4">
+                                        <div class="flex items-start justify-between gap-4">
+                                            <div>
+                                                <p class="text-xs font-bold uppercase tracking-wide text-indigo-600">Program Dipilih</p>
+                                                <p class="mt-1 text-lg font-extrabold text-slate-950">{{ $selectedProgramModel->name }}</p>
+                                                <p class="mt-1 text-sm font-semibold text-slate-500">{{ $quotaLabel }} - mulai {{ $priceLabel }}</p>
+                                            </div>
+                                            <span class="material-symbols-outlined text-[24px] text-indigo-600">{{ $shouldLockProgram ? 'lock' : 'check_circle' }}</span>
+                                        </div>
+                                        @if(!$shouldLockProgram)
+                                            <a href="{{ route('programs.change') }}" class="mt-4 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700">
+                                                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                                                Ganti sub-program
+                                            </a>
+                                        @endif
+                                    </div>
                                 @else
                                     <input id="program" name="program" type="hidden" value="{{ $selectedProgram }}">
                                     <div class="space-y-4">
@@ -329,7 +346,13 @@
                             </div>
                             @if($hasSelectedProgram)
                                 <p class="mt-2 text-xs font-medium text-slate-500">
-                                    {{ $shouldLockProgram ? 'Program sudah dikunci karena bukti pembayaran sudah dikirim.' : 'Program saat ini sudah terpilih, tetapi masih bisa diganti sebelum upload bukti pembayaran.' }}
+                                    @if($shouldLockProgram)
+                                        Program sudah dikunci karena bukti pembayaran sudah dikirim.
+                                    @elseif($isChangingSelection)
+                                        Program sudah dipilih dari halaman sebelumnya. Lanjutkan dengan memilih jenis kelas dan jadwal belajar.
+                                    @else
+                                        Program saat ini sudah terpilih, tetapi masih bisa diganti sebelum upload bukti pembayaran.
+                                    @endif
                                 </p>
                             @endif
 
@@ -492,8 +515,6 @@
         const continueButton = document.getElementById('continueButton');
         const confirmationActions = document.getElementById('confirmationActions');
         const backButton = document.getElementById('backButton');
-        const currentChoiceSummary = document.getElementById('currentChoiceSummary');
-        const editChoiceButton = document.getElementById('editChoiceButton');
         const stepProgress = document.getElementById('stepProgress');
         const indicators = document.querySelectorAll('.step-indicator');
 
@@ -856,13 +877,6 @@
 
         continueButton?.addEventListener('click', goToConfirmation);
         backButton?.addEventListener('click', backToForm);
-        editChoiceButton?.addEventListener('click', function () {
-            currentChoiceSummary?.classList.add('hidden');
-            fieldsStep?.classList.remove('hidden');
-            continueButton?.classList.remove('hidden');
-            setStep(2);
-            fieldsStep?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
         if (programInput?.tagName === 'SELECT') {
             programInput.addEventListener('change', updateProgramSelection);
         }
