@@ -125,7 +125,7 @@
 
             <div class="relative">
                 <div class="relative rounded-3xl overflow-hidden shadow-2xl z-10 border border-white/10">
-                    <img src="{{ asset('images/student-learning.svg') }}" alt="Student studying" class="w-full h-auto object-cover">
+                    <img src="{{ asset('images/cell-logo-home.svg') }}" alt="CELL Fun n Easy English" class="w-full h-auto object-cover">
                 </div>
                 <div class="absolute -top-8 -right-8 w-32 h-32 bg-indigo-100 rounded-full blur-3xl opacity-40"></div>
                 <div class="absolute -bottom-10 -left-10 w-48 h-48 bg-indigo-50 rounded-full blur-3xl opacity-30"></div>

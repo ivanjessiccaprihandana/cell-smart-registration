@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @php
-    $pageTitle = 'Pilihan Jadwal';
+    $pageTitle = 'Batch & Pilihan Jadwal';
     $templates = $templates ?? collect();
     $dayLabels = $dayLabels ?? [];
     $selectedStatus = $selectedStatus ?? 'active';
@@ -13,12 +13,12 @@
     <section class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
             <p class="text-sm font-semibold text-indigo-600">Manajemen Kelas</p>
-            <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Pilihan Jadwal</h2>
-            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Kelola pilihan jadwal aktif yang bisa dipilih siswa. Jadwal nonaktif disimpan sebagai arsip dan tidak tampil ke siswa.</p>
+            <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Batch & Pilihan Jadwal</h2>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Kelola batch pendaftaran, periode belajar, dan pilihan jadwal yang bisa dipilih calon siswa.</p>
         </div>
         <a href="{{ route('admin.schedule-templates.create') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
             <span class="material-symbols-outlined text-[20px]">add</span>
-            Tambah Pilihan Jadwal
+            Tambah Batch Jadwal
         </a>
     </section>
 
@@ -52,10 +52,10 @@
         <div class="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 md:flex-row md:items-center md:justify-between">
             <div>
                 <h3 class="text-lg font-extrabold text-slate-950">
-                    {{ $selectedStatus === 'inactive' ? 'Arsip Pilihan Jadwal' : ($selectedStatus === 'all' ? 'Semua Pilihan Jadwal' : 'Pilihan Jadwal Aktif') }}
+                    {{ $selectedStatus === 'inactive' ? 'Arsip Batch Jadwal' : ($selectedStatus === 'all' ? 'Semua Batch Jadwal' : 'Batch Jadwal Aktif') }}
                 </h3>
                 <p class="mt-1 text-sm text-slate-500">
-                    {{ $selectedStatus === 'inactive' ? 'Jadwal nonaktif tidak tampil ke siswa.' : 'Pilihan hari dan jam belajar yang bisa dipilih siswa sesuai program, jenis kelas, dan level.' }}
+                    {{ $selectedStatus === 'inactive' ? 'Batch nonaktif tidak tampil ke siswa.' : 'Pilihan batch, hari, dan jam belajar yang bisa dipilih siswa sesuai program.' }}
                 </p>
             </div>
             @if($selectedStatus !== 'active')
@@ -136,7 +136,7 @@
                     @empty
                         <tr>
                             <td colspan="6" class="px-6 py-12 text-center text-sm font-semibold text-slate-500">
-                                {{ $selectedStatus === 'active' ? 'Belum ada pilihan jadwal aktif.' : 'Belum ada pilihan jadwal pada filter ini.' }}
+                                {{ $selectedStatus === 'active' ? 'Belum ada batch jadwal aktif.' : 'Belum ada batch jadwal pada filter ini.' }}
                             </td>
                         </tr>
                     @endforelse

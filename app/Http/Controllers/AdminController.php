@@ -544,7 +544,7 @@ class AdminController extends Controller
             ->values();
 
         return view('admin.schedules.index', [
-            'title' => 'Jadwal Siswa',
+            'title' => 'Jadwal Belajar Siswa',
             'schedules' => $schedules,
             'totalStudents' => $schedules->sum(fn (ClassSchedule $schedule) => (int) $schedule->student_count),
             'weekDays' => $weekDays,
@@ -571,7 +571,7 @@ class AdminController extends Controller
             ->withQueryString();
 
         return view('admin.schedule-templates.index', [
-            'title' => 'Pilihan Jadwal',
+            'title' => 'Batch & Pilihan Jadwal',
             'templates' => $templates,
             'dayLabels' => $this->dayLabels(),
             'selectedStatus' => $selectedStatus,
@@ -677,7 +677,7 @@ class AdminController extends Controller
     public function createScheduleTemplate()
     {
         return view('admin.schedule-templates.create', [
-            'title' => 'Tambah Pilihan Jadwal',
+            'title' => 'Tambah Batch Jadwal',
             ...$this->scheduleTemplateFormData(),
         ]);
     }
@@ -694,7 +694,7 @@ class AdminController extends Controller
     public function editScheduleTemplate(ScheduleTemplate $scheduleTemplate)
     {
         return view('admin.schedule-templates.edit', [
-            'title' => 'Edit Pilihan Jadwal',
+            'title' => 'Edit Batch Jadwal',
             'scheduleTemplate' => $scheduleTemplate,
             ...$this->scheduleTemplateFormData(),
         ]);
@@ -727,7 +727,7 @@ class AdminController extends Controller
     public function createSchedule()
     {
         return view('admin.schedules.create', [
-            'title' => 'Tambah Jadwal Siswa',
+            'title' => 'Tambah Jadwal Belajar',
             ...$this->scheduleFormData(),
         ]);
     }
@@ -746,7 +746,7 @@ class AdminController extends Controller
     public function editSchedule(ClassSchedule $schedule)
     {
         return view('admin.schedules.edit', [
-            'title' => 'Edit Jadwal Siswa',
+            'title' => 'Edit Jadwal Belajar',
             'schedule' => $schedule->load(['student.latestPlacementAttempt', 'tutor']),
             ...$this->scheduleFormData(),
         ]);
@@ -1245,13 +1245,13 @@ class AdminController extends Controller
         $categories = ProgramCategory::query()
             ->with(['parent', 'children', 'programs'])
             ->withCount(['children', 'programs'])
-            ->orderBy('parent_id')
+            ->whereNull('parent_id')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->paginate(15);
 
         return view('admin.program-categories.index', [
-            'title' => 'Kategori Tampilan',
+            'title' => 'Kelompok Program',
             'categories' => $categories,
         ]);
     }
@@ -1259,7 +1259,7 @@ class AdminController extends Controller
     public function createProgramCategory()
     {
         return view('admin.program-categories.create', [
-            'title' => 'Tambah Kategori Tampilan',
+            'title' => 'Tambah Kelompok Program',
             'parentCategories' => $this->parentProgramCategories(),
         ]);
     }
@@ -1267,21 +1267,22 @@ class AdminController extends Controller
     public function storeProgramCategory(Request $request)
     {
         $validated = $this->validateProgramCategory($request);
-        $validated['slug'] = $this->programCategorySlug($validated['name'], $validated['parent_id'] ?? null);
+        $validated['parent_id'] = null;
+        $validated['slug'] = $this->programCategorySlug($validated['name'], null);
         $validated['is_active'] = $request->boolean('is_active');
-        $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
+        $validated['sort_order'] = (int) ($validated['sort_order'] ?? $this->nextProgramCategorySortOrder());
 
         ProgramCategory::create($validated);
 
         return redirect()
             ->route('admin.program-categories.index')
-            ->with('success', 'Kategori tampilan berhasil ditambahkan.');
+            ->with('success', 'Kelompok program berhasil ditambahkan.');
     }
 
     public function editProgramCategory(ProgramCategory $category)
     {
         return view('admin.program-categories.edit', [
-            'title' => 'Edit Kategori Tampilan',
+            'title' => 'Edit Kelompok Program',
             'category' => $category,
             'parentCategories' => $this->parentProgramCategories($category),
         ]);
@@ -1290,15 +1291,16 @@ class AdminController extends Controller
     public function updateProgramCategory(Request $request, ProgramCategory $category)
     {
         $validated = $this->validateProgramCategory($request, $category);
-        $validated['slug'] = $this->programCategorySlug($validated['name'], $validated['parent_id'] ?? null);
+        $validated['parent_id'] = null;
+        $validated['slug'] = $this->programCategorySlug($validated['name'], null);
         $validated['is_active'] = $request->boolean('is_active');
-        $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
+        $validated['sort_order'] = (int) ($validated['sort_order'] ?? $category->sort_order ?? $this->nextProgramCategorySortOrder());
 
         $category->update($validated);
 
         return redirect()
             ->route('admin.program-categories.index')
-            ->with('success', 'Kategori tampilan berhasil diperbarui.');
+            ->with('success', 'Kelompok program berhasil diperbarui.');
     }
 
     public function destroyProgramCategory(ProgramCategory $category)
@@ -1306,14 +1308,14 @@ class AdminController extends Controller
         if ($category->children()->exists() || $category->programs()->exists()) {
             return redirect()
                 ->route('admin.program-categories.index')
-                ->withErrors(['category' => 'Kategori tidak bisa dihapus karena masih memiliki sub-kategori atau program.']);
+                ->withErrors(['category' => 'Kelompok tidak bisa dihapus karena masih dipakai oleh program.']);
         }
 
         $category->delete();
 
         return redirect()
             ->route('admin.program-categories.index')
-            ->with('success', 'Kategori tampilan berhasil dihapus.');
+            ->with('success', 'Kelompok program berhasil dihapus.');
     }
 
     private function validateProgram(Request $request): array
@@ -1335,15 +1337,9 @@ class AdminController extends Controller
 
     private function validateProgramCategory(Request $request, ?ProgramCategory $category = null): array
     {
-        $parentId = $request->input('parent_id') ?: null;
-        $slug = $this->programCategorySlug($request->input('name', ''), $parentId);
+        $slug = $this->programCategorySlug($request->input('name', ''), null);
 
         $validated = $request->validate([
-            'parent_id' => [
-                'nullable',
-                Rule::exists('program_categories', 'id'),
-                Rule::notIn([$category?->id]),
-            ],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -1357,7 +1353,7 @@ class AdminController extends Controller
 
         if ($slugExists) {
             throw ValidationException::withMessages([
-                'name' => 'Kategori tampilan dengan nama dan parent ini sudah ada.',
+                'name' => 'Kelompok program dengan nama ini sudah ada.',
             ]);
         }
 
@@ -1377,24 +1373,12 @@ class AdminController extends Controller
     private function programCategories(): array
     {
         return ProgramCategory::query()
-            ->with('parent')
             ->where('is_active', true)
-            ->where(function ($query) {
-                $query
-                    ->whereNull('parent_id')
-                    ->orWhereHas('parent', fn ($query) => $query->where('is_active', true));
-            })
-            ->orderBy('parent_id')
+            ->whereNull('parent_id')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
-            ->mapWithKeys(function (ProgramCategory $category) {
-                $label = $category->parent
-                    ? "{$category->parent->name} / {$category->name}"
-                    : $category->name;
-
-                return [$category->id => $label];
-            })
+            ->pluck('name', 'id')
             ->all();
     }
 
@@ -1413,6 +1397,11 @@ class AdminController extends Controller
     private function programCategorySlug(string $name, ?int $parentId): string
     {
         return Str::slug(($parentId ? $parentId . '-' : '') . $name);
+    }
+
+    private function nextProgramCategorySortOrder(): int
+    {
+        return ((int) ProgramCategory::whereNull('parent_id')->max('sort_order')) + 10;
     }
 
     private function programCategoryLabels(): array

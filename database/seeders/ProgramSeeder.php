@@ -43,12 +43,10 @@ class ProgramSeeder extends Seeder
         ];
 
         foreach ($levels as $levelName => $level) {
-            $levelCategory = $this->category($levelName, $english->id, $level['sort'], $level['description']);
-
             Program::updateOrCreate(
                 ['name' => $levelName],
                 [
-                    'program_category_id' => $levelCategory->id,
+                    'program_category_id' => $english->id,
                     'description' => $level['description'],
                     'category' => 'Bahasa Inggris',
                     'quota' => $level['quota'],
@@ -61,6 +59,19 @@ class ProgramSeeder extends Seeder
                 ]
             );
         }
+
+        ProgramCategory::query()
+            ->where('parent_id', $english->id)
+            ->whereIn('name', array_keys($levels))
+            ->get()
+            ->each(function (ProgramCategory $category) use ($english) {
+                Program::where('program_category_id', $category->id)
+                    ->update(['program_category_id' => $english->id]);
+
+                if (!$category->children()->exists() && !$category->programs()->exists()) {
+                    $category->delete();
+                }
+            });
 
         foreach ([
             ['English Conversation', $english->id, 'Bahasa Inggris', 8, 1200000, 'Latihan percakapan agar siswa lebih percaya diri berbicara Bahasa Inggris.'],

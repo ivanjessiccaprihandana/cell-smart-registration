@@ -12,17 +12,17 @@
     </div>
 
     <div>
-        <label for="program_category_id" class="mb-2 block text-sm font-bold text-slate-800">Kategori Tampilan</label>
+        <label for="program_category_id" class="mb-2 block text-sm font-bold text-slate-800">Kelompok Program</label>
         <select id="program_category_id" name="program_category_id"
             class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
-            <option value="">Pilih kategori tampilan...</option>
+            <option value="">Pilih kelompok program...</option>
             @foreach(($categories ?? []) as $value => $label)
                 <option value="{{ $value }}" @selected((string) old('program_category_id', $program->program_category_id ?? '') === (string) $value)>{{ $label }}</option>
             @endforeach
         </select>
         <p class="mt-2 text-xs font-medium text-slate-500">
             Dipakai untuk mengelompokkan program/sub-program di data admin.
-            <a href="{{ route('admin.program-categories.create') }}" class="font-bold text-indigo-600 hover:text-indigo-700">Tambah kategori</a>
+            <a href="{{ route('admin.program-categories.create') }}" class="font-bold text-indigo-600 hover:text-indigo-700">Tambah kelompok</a>
         </p>
         @error('program_category_id')
             <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>

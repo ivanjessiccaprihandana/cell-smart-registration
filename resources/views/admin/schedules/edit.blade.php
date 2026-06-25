@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@php($pageTitle = 'Edit Jadwal Siswa')
+@php($pageTitle = 'Edit Jadwal Belajar')
 
 @section('content')
 <div class="mx-auto max-w-3xl space-y-5">
@@ -10,7 +10,7 @@
                 <span class="material-symbols-outlined">arrow_back</span>
             </a>
             <div>
-                <h2 class="text-xl font-extrabold text-slate-950">Edit Jadwal Siswa</h2>
+                <h2 class="text-xl font-extrabold text-slate-950">Edit Jadwal Belajar</h2>
                 <p class="mt-1 text-sm font-semibold text-slate-500">{{ $schedule->student?->name ?? 'Siswa' }} - {{ $schedule->program?->name ?? 'Program' }}</p>
             </div>
         </div>

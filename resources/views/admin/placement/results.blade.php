@@ -1,13 +1,13 @@
 @extends('layouts.admin')
 
-@php($pageTitle = 'Hasil Tes')
+@php($pageTitle = 'Hasil Placement Test')
 
 @section('content')
 <div class="mx-auto max-w-7xl space-y-6">
     <section class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
             <p class="text-sm font-semibold text-indigo-600">Placement Test</p>
-            <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Hasil Tes Siswa</h2>
+            <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Hasil Placement Test</h2>
             <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Lihat skor, level rekomendasi, waktu pengerjaan, dan detail jawaban siswa.</p>
         </div>
         <a href="{{ route('admin.placement.questions.index') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">

@@ -181,7 +181,7 @@
     <a href="{{ route('admin.schedule-templates.index') }}" class="inline-flex h-12 items-center justify-center rounded-lg border border-slate-300 px-5 text-sm font-bold text-slate-700 hover:border-indigo-600 hover:text-indigo-600">Batal</a>
     <button type="submit" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
         <span class="material-symbols-outlined text-[18px]">save</span>
-        Simpan Pilihan Jadwal
+        Simpan Batch Jadwal
     </button>
 </div>
 

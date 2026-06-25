@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @php
-    $pageTitle = 'Jadwal Siswa';
+    $pageTitle = 'Jadwal Belajar Siswa';
     $scheduleStyle = 'border-indigo-200 bg-indigo-50 text-indigo-900';
 @endphp
 
@@ -11,12 +11,12 @@
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
                 <p class="text-sm font-semibold text-indigo-600">Manajemen Kelas</p>
-                <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">Jadwal Siswa</h2>
+                <h2 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">Jadwal Belajar Siswa</h2>
                 <p class="mt-1 text-sm text-slate-500">Jadwal ditampilkan per kelas/pertemuan agar admin mudah mengecek kapasitas dan peserta.</p>
             </div>
             <a href="{{ route('admin.schedules.create') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
                 <span class="material-symbols-outlined text-[20px]">add</span>
-                Tambah Jadwal Siswa
+                Tambah Jadwal Belajar
             </a>
         </div>
     </section>

@@ -38,7 +38,7 @@
 
     <section class="grid gap-4 md:grid-cols-3">
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Pilihan Jadwal</p>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Batch Jadwal</p>
             <p class="mt-2 text-3xl font-extrabold text-slate-950">{{ $templates->count() }}</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -53,7 +53,7 @@
 
     <section class="space-y-4">
         <div>
-            <h3 class="text-xl font-extrabold text-slate-950">Isi Kelas Per Pilihan Jadwal</h3>
+            <h3 class="text-xl font-extrabold text-slate-950">Isi Kelas Per Batch Jadwal</h3>
             <p class="mt-1 text-sm font-medium text-slate-500">Daftar ini membantu admin melihat siapa saja yang masuk ke setiap pilihan jadwal di ruang ini.</p>
         </div>
 

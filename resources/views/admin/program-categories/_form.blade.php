@@ -2,37 +2,11 @@
 
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <div>
-        <label for="name" class="mb-2 block text-sm font-bold text-slate-800">Nama Kategori</label>
+        <label for="name" class="mb-2 block text-sm font-bold text-slate-800">Nama Kelompok</label>
         <input id="name" name="name" type="text" value="{{ old('name', $category->name ?? '') }}" required
             class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
             placeholder="Contoh: Bahasa Inggris / English for Kids" />
         @error('name')
-            <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
-        @enderror
-    </div>
-
-    <div>
-        <label for="parent_id" class="mb-2 block text-sm font-bold text-slate-800">Parent Kategori</label>
-        <select id="parent_id" name="parent_id"
-            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
-            <option value="">Kategori utama</option>
-            @foreach(($parentCategories ?? []) as $value => $label)
-                <option value="{{ $value }}" @selected((string) old('parent_id', $category->parent_id ?? '') === (string) $value)>{{ $label }}</option>
-            @endforeach
-        </select>
-        <p class="mt-2 text-xs font-medium text-slate-500">Kosongkan untuk kategori utama. Pilih parent untuk membuat sub-kategori.</p>
-        @error('parent_id')
-            <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
-        @enderror
-    </div>
-
-    <div>
-        <label for="sort_order" class="mb-2 block text-sm font-bold text-slate-800">Urutan</label>
-        <input id="sort_order" name="sort_order" type="number" min="0" value="{{ old('sort_order', $category->sort_order ?? 0) }}"
-            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
-            placeholder="Contoh: 10" />
-        <p class="mt-2 text-xs font-medium text-slate-500">Angka lebih kecil tampil lebih dulu.</p>
-        @error('sort_order')
             <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
         @enderror
     </div>
@@ -60,6 +34,6 @@
     <a href="{{ route('admin.program-categories.index') }}" class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-bold text-slate-700 hover:border-indigo-600 hover:text-indigo-600">Batal</a>
     <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
         <span class="material-symbols-outlined text-[20px]">save</span>
-        Simpan Kategori
+        Simpan Kelompok
     </button>
 </div>

@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@php($pageTitle = 'Tambah Pilihan Jadwal')
+@php($pageTitle = 'Tambah Batch Jadwal')
 
 @section('content')
 <div class="mx-auto max-w-4xl space-y-5">
@@ -9,7 +9,7 @@
             <a href="{{ route('admin.schedule-templates.index') }}" class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-indigo-600" aria-label="Kembali">
                 <span class="material-symbols-outlined">arrow_back</span>
             </a>
-            <h2 class="text-xl font-extrabold text-slate-950">Tambah Pilihan Jadwal</h2>
+            <h2 class="text-xl font-extrabold text-slate-950">Tambah Batch Jadwal</h2>
         </div>
     </section>
 

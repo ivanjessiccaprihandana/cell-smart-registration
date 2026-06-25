@@ -33,13 +33,13 @@
                     <span class="material-symbols-outlined text-[20px]">school</span>
                     Program
                 </a>
+                <a href="{{ route('admin.program-categories.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.program-categories.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
+                    <span class="material-symbols-outlined text-[20px]">category</span>
+                    Kelompok Program
+                </a>
                 <a href="{{ route('admin.tutors.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.tutors.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">person_book</span>
                     Tutor
-                </a>
-                <a href="{{ route('admin.program-categories.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.program-categories.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
-                    <span class="material-symbols-outlined text-[20px]">category</span>
-                    Kategori Tampilan
                 </a>
                 <a href="{{ route('admin.placement.questions.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.placement.questions.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">quiz</span>
@@ -47,19 +47,19 @@
                 </a>
                 <a href="{{ route('admin.placement.results') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.placement.results') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
-                    Hasil Tes
+                    Hasil Placement Test
                 </a>
                 <a href="{{ route('admin.schedules.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.schedules.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">calendar_month</span>
-                    Jadwal Siswa
+                    Jadwal Belajar Siswa
+                </a>
+                <a href="{{ route('admin.schedule-templates.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.schedule-templates.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
+                    <span class="material-symbols-outlined text-[20px]">event_repeat</span>
+                    Batch & Pilihan Jadwal
                 </a>
                 <a href="{{ route('admin.class-rooms.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.class-rooms.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">meeting_room</span>
                     Ruang Kelas
-                </a>
-                <a href="{{ route('admin.schedule-templates.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.schedule-templates.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
-                    <span class="material-symbols-outlined text-[20px]">event_repeat</span>
-                    Pilihan Jadwal
                 </a>
                 <a href="{{ route('home') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 hover:bg-slate-100 hover:text-slate-900">
                     <span class="material-symbols-outlined text-[20px]">public</span>
@@ -100,13 +100,13 @@
                                     <span class="material-symbols-outlined text-[20px]">school</span>
                                     Program
                                 </a>
+                                <a href="{{ route('admin.program-categories.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.program-categories.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
+                                    <span class="material-symbols-outlined text-[20px]">category</span>
+                                    Kelompok Program
+                                </a>
                                 <a href="{{ route('admin.tutors.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.tutors.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">person_book</span>
                                     Tutor
-                                </a>
-                                <a href="{{ route('admin.program-categories.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.program-categories.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
-                                    <span class="material-symbols-outlined text-[20px]">category</span>
-                                    Kategori Tampilan
                                 </a>
                                 <a href="{{ route('admin.placement.questions.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.placement.questions.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">quiz</span>
@@ -114,19 +114,19 @@
                                 </a>
                                 <a href="{{ route('admin.placement.results') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.placement.results') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
-                                    Hasil Tes
+                                    Hasil Placement Test
                                 </a>
                                 <a href="{{ route('admin.schedules.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.schedules.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">calendar_month</span>
-                                    Jadwal Siswa
+                                    Jadwal Belajar Siswa
+                                </a>
+                                <a href="{{ route('admin.schedule-templates.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.schedule-templates.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
+                                    <span class="material-symbols-outlined text-[20px]">event_repeat</span>
+                                    Batch & Pilihan Jadwal
                                 </a>
                                 <a href="{{ route('admin.class-rooms.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.class-rooms.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">meeting_room</span>
                                     Ruang Kelas
-                                </a>
-                                <a href="{{ route('admin.schedule-templates.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.schedule-templates.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
-                                    <span class="material-symbols-outlined text-[20px]">event_repeat</span>
-                                    Pilihan Jadwal
                                 </a>
                             </div>
                         </details>
