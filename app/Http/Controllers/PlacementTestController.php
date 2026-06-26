@@ -11,6 +11,8 @@ use Illuminate\Support\Str;
 
 class PlacementTestController extends Controller
 {
+    private const TEST_DURATION_SECONDS = 10;
+
     public function index()
     {
         $paymentRedirect = $this->ensurePaymentCompleted();
@@ -27,9 +29,29 @@ class PlacementTestController extends Controller
             ->latest()
             ->first();
 
+        if ($latestAttempt) {
+            session()->forget('placement_test_started_at');
+        }
+
+        $placementStartedAt = null;
+        $remainingSeconds = self::TEST_DURATION_SECONDS;
+
+        if (!$latestAttempt && $questions->isNotEmpty()) {
+            $placementStartedAt = session('placement_test_started_at');
+
+            if (!$placementStartedAt) {
+                $placementStartedAt = now()->timestamp;
+                session(['placement_test_started_at' => $placementStartedAt]);
+            }
+
+            $remainingSeconds = max(0, self::TEST_DURATION_SECONDS - (now()->timestamp - (int) $placementStartedAt));
+        }
+
         return view('placement-test', [
             'questions' => $questions,
             'latestAttempt' => $latestAttempt,
+            'placementStartedAt' => $placementStartedAt,
+            'remainingSeconds' => $remainingSeconds,
         ]);
     }
 
@@ -38,6 +60,12 @@ class PlacementTestController extends Controller
         $paymentRedirect = $this->ensurePaymentCompleted();
         if ($paymentRedirect) {
             return $paymentRedirect;
+        }
+
+        if (PlacementTestAttempt::where('user_id', Auth::id())->exists()) {
+            return redirect()
+                ->route('placement-test')
+                ->withErrors(['placement_test' => 'Placement test sudah pernah dikerjakan. Hubungi admin jika perlu mengulang test.']);
         }
 
         $questions = PlacementQuestion::where('is_active', true)
@@ -50,13 +78,12 @@ class PlacementTestController extends Controller
         }
 
         $validated = $request->validate([
-            'answers' => ['required', 'array'],
+            'answers' => ['nullable', 'array'],
             'started_at' => ['nullable', 'integer'],
-        ], [
-            'answers.required' => 'Silakan jawab minimal satu soal terlebih dahulu.',
         ]);
 
-        $submittedAnswers = $validated['answers'];
+        $startedAt = (int) session('placement_test_started_at', $validated['started_at'] ?? now()->timestamp);
+        $submittedAnswers = $validated['answers'] ?? [];
         $answerRows = [];
         $correctAnswers = 0;
 
@@ -83,9 +110,7 @@ class PlacementTestController extends Controller
         $totalQuestions = $questions->count();
         $scorePercentage = (int) round(($correctAnswers / $totalQuestions) * 100);
         $placementLevel = $this->placementLevel($scorePercentage);
-        $durationSeconds = isset($validated['started_at'])
-            ? max(0, now()->timestamp - (int) $validated['started_at'])
-            : null;
+        $durationSeconds = min(self::TEST_DURATION_SECONDS, max(0, now()->timestamp - $startedAt));
 
         $attempt = PlacementTestAttempt::create([
             'user_id' => Auth::id(),
@@ -97,6 +122,8 @@ class PlacementTestController extends Controller
             'answers' => $answerRows,
             'duration_seconds' => $durationSeconds,
         ]);
+
+        session()->forget('placement_test_started_at');
 
         return redirect()
             ->route('student.schedule')

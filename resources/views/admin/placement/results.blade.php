@@ -16,6 +16,12 @@
         </a>
     </section>
 
+    @if(session('success'))
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-700">
+            {{ session('success') }}
+        </div>
+    @endif
+
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
@@ -27,6 +33,7 @@
                         <th class="px-6 py-4">Rekomendasi</th>
                         <th class="px-6 py-4">Waktu</th>
                         <th class="px-6 py-4">Detail</th>
+                        <th class="px-6 py-4">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -84,10 +91,24 @@
                                     </div>
                                 </details>
                             </td>
+                            <td class="px-6 py-4">
+                                @if($attempt->user)
+                                    <form method="POST" action="{{ route('admin.placement.results.reset', $attempt->user) }}" onsubmit="return confirm('Buka ulang placement test untuk {{ $attempt->user->name }}? Hasil test lama akan dihapus.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 hover:border-amber-400 hover:bg-amber-100">
+                                            <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                                            Izinkan Ulang Test
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="text-xs font-semibold text-slate-400">User terhapus</span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center">
+                            <td colspan="7" class="px-6 py-12 text-center">
                                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
                                     <span class="material-symbols-outlined">assignment_turned_in</span>
                                 </div>

@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Admin CELL',
                 'password' => Hash::make('password'),
+                'is_admin' => true,
             ]
         );
 

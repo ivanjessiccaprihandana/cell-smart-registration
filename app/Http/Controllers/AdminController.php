@@ -483,6 +483,20 @@ class AdminController extends Controller
         ]);
     }
 
+    public function resetPlacementTest(User $user)
+    {
+        $deletedAttempts = PlacementTestAttempt::where('user_id', $user->id)->delete();
+
+        return redirect()
+            ->route('admin.placement.results')
+            ->with(
+                'success',
+                $deletedAttempts > 0
+                    ? "Placement test {$user->name} sudah dibuka ulang."
+                    : "{$user->name} belum memiliki hasil placement test."
+            );
+    }
+
     public function schedules(Request $request)
     {
         $weekStart = \Illuminate\Support\Carbon::parse($request->query('week', now()))
@@ -1408,7 +1422,6 @@ class AdminController extends Controller
     {
         return [
             'Bahasa Inggris' => 'Bahasa Inggris',
-            'Private' => 'Private',
             'Test Preparation' => 'Test Preparation',
             'BIMBEL' => 'BIMBEL',
         ];

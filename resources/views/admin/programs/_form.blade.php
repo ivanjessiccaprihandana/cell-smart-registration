@@ -21,7 +21,7 @@
             @endforeach
         </select>
         <p class="mt-2 text-xs font-medium text-slate-500">
-            Dipakai untuk mengelompokkan program/sub-program di data admin.
+            Pilih kelompok utama program, misalnya Bahasa Inggris, Test Preparation, atau BIMBEL.
             <a href="{{ route('admin.program-categories.create') }}" class="font-bold text-indigo-600 hover:text-indigo-700">Tambah kelompok</a>
         </p>
         @error('program_category_id')
@@ -38,7 +38,7 @@
                 <option value="{{ $value }}" @selected(old('category', $program->category ?? '') === $value)>{{ $label }}</option>
             @endforeach
         </select>
-        <p class="mt-2 text-xs font-medium text-slate-500">Dipakai untuk filter, badge, dan ringkasan program.</p>
+        <p class="mt-2 text-xs font-medium text-slate-500">Dipakai untuk filter dan ringkasan program. Private diatur sebagai jenis kelas, bukan label kategori.</p>
         @error('category')
             <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
         @enderror

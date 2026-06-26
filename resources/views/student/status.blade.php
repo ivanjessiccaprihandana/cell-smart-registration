@@ -182,14 +182,16 @@
                             Test Tidak Perlu
                         </span>
                     @elseif($canTakePlacement)
-                        <a href="{{ route('placement-test') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
-                            <span class="material-symbols-outlined text-[18px]">visibility</span>
-                            {{ $latestPlacementAttempt ? 'Lihat Hasil' : 'Mulai Test' }}
-                        </a>
-                        <a href="{{ route('placement-test', ['retry' => 1]) }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600">
-                            <span class="material-symbols-outlined text-[18px]">restart_alt</span>
-                            Ulangi Test
-                        </a>
+                        <div class="sm:col-span-2">
+                            <a href="{{ route('placement-test') }}" class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
+                                <span class="material-symbols-outlined text-[18px]">visibility</span>
+                                {{ $latestPlacementAttempt ? 'Lihat Hasil' : 'Mulai Test' }}
+                            </a>
+                            <div class="mt-3 flex gap-2 rounded-lg bg-slate-50 px-4 py-3 text-xs font-semibold leading-5 text-slate-600">
+                                <span class="material-symbols-outlined mt-0.5 text-[16px] text-indigo-600">info</span>
+                                <p>Test hanya dapat dikerjakan satu kali. Jika ada kendala teknis, hubungi admin untuk membuka ulang akses test.</p>
+                            </div>
+                        </div>
                     @else
                         <a href="{{ $paymentStatus === 'menunggu_verifikasi' ? route('programs.payment.success') : route('programs.payment') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
                             <span class="material-symbols-outlined text-[18px]">{{ $paymentStatus === 'menunggu_verifikasi' ? 'schedule' : 'upload_file' }}</span>

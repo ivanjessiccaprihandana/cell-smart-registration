@@ -312,7 +312,7 @@
                                         @if(!$shouldLockProgram)
                                             <a href="{{ route('programs.change') }}" class="mt-4 inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700">
                                                 <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-                                                Ganti sub-program
+                                                Ganti program
                                             </a>
                                         @endif
                                     </div>
@@ -336,7 +336,7 @@
                                         </div>
 
                                         <div>
-                                            <label for="programSubmenu" class="mb-2 block text-sm font-semibold text-slate-800">Sub-Program</label>
+                                            <label for="programSubmenu" class="mb-2 block text-sm font-semibold text-slate-800">Program</label>
                                             <div class="relative">
                                                 <select id="programSubmenu" required
                                                     class="w-full appearance-none rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
@@ -634,7 +634,7 @@
             placeholder.value = '';
             placeholder.disabled = true;
             placeholder.selected = true;
-            placeholder.textContent = programs.length ? 'Pilih sub-program...' : 'Belum ada program aktif';
+            placeholder.textContent = programs.length ? 'Pilih program...' : 'Belum ada program aktif';
             programSubmenuInput.appendChild(placeholder);
 
             programs.forEach(function (program) {

@@ -9,7 +9,7 @@
     $groups = [
         [
             'breadcrumb' => 'Bahasa Inggris',
-            'title' => 'Pilih Sub-Program Bahasa Inggris',
+            'title' => 'Pilih Program Bahasa Inggris',
             'description' => 'Pilih kelas sesuai usia dan kebutuhan siswa agar proses belajar lebih tepat, nyaman, dan mudah diikuti.',
             'programs' => [
                 [
@@ -115,7 +115,7 @@
                         <span class="text-rose-600">Batas upload: {{ $paymentDeadline->format('d M Y H:i') }}</span>
                     @endif
                 </div>
-                <h1 class="mt-5 text-3xl font-extrabold tracking-tight text-slate-950 md:text-4xl">Pilih Sub-Program</h1>
+                <h1 class="mt-5 text-3xl font-extrabold tracking-tight text-slate-950 md:text-4xl">Pilih Program</h1>
                 <p class="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-600">Pilih program baru terlebih dahulu. Setelah itu Anda akan memilih jenis kelas dan jadwal belajar.</p>
             </div>
             <a href="{{ route('programs.payment') }}" class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-md hover:border-indigo-500 hover:text-indigo-600" aria-label="Kembali ke pembayaran">

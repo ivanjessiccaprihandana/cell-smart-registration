@@ -23,10 +23,10 @@
     <div class="mx-auto max-w-6xl space-y-8">
         <section class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-                <p class="text-sm font-bold uppercase tracking-wide text-indigo-600">Konsultasi Jadwal</p>
-                <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">Atur Jadwal Belajar Anda</h1>
+                <p class="text-sm font-bold uppercase tracking-wide text-indigo-600">Jadwal Belajar</p>
+                <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">Jadwal Belajar Anda</h1>
                 <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                    Jadwal belajar akan disesuaikan bersama pihak CELL English Course berdasarkan level, program, dan ketersediaan waktu Anda.
+                    Lihat jadwal kelas, ruang, tutor, dan daftar pertemuan selama periode belajar.
                 </p>
             </div>
             <a href="{{ route('student.status') }}" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600">
@@ -47,12 +47,20 @@
             </section>
         @endif
 
-        <section class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <section class="grid gap-6 lg:grid-cols-[1fr_320px]">
             <article class="overflow-hidden rounded-3xl border border-indigo-100 bg-white shadow-xl shadow-slate-900/5">
                 <div class="bg-indigo-600 px-6 py-6 text-white md:px-8">
                     <p class="text-sm font-bold uppercase tracking-wide text-indigo-100">CELL English Course</p>
-                    <h2 class="mt-2 text-3xl font-extrabold">Konsultasi Jadwal Belajar</h2>
-                    <p class="mt-2 text-sm font-semibold text-indigo-100">{{ $requiresPlacementTest ? 'Placement test selesai, jadwal akan dipilih setelah konsultasi.' : 'Program ini tidak memerlukan placement test, jadwal akan dipilih setelah konsultasi.' }}</p>
+                    <h2 class="mt-2 text-3xl font-extrabold">Informasi Jadwal Belajar</h2>
+                    <p class="mt-2 text-sm font-semibold text-indigo-100">
+                        @if($assignedSchedules->isNotEmpty())
+                            Jadwal belajar sudah ditentukan. Silakan ikuti pertemuan sesuai periode yang tertera.
+                        @elseif($requiresPlacementTest)
+                            Placement test selesai, jadwal akan dipilih setelah konsultasi.
+                        @else
+                            Program ini tidak memerlukan placement test, jadwal akan dipilih setelah konsultasi.
+                        @endif
+                    </p>
                 </div>
 
                 <div class="grid gap-4 p-6 md:grid-cols-2 md:p-8">
@@ -121,7 +129,7 @@
                             </div>
 
                             <div class="mt-5 rounded-xl bg-white/70 px-4 py-3 text-sm font-semibold leading-6 text-slate-600">
-                                Kelas berlangsung 2 kali seminggu selama periode belajar. Setiap pertemuan mengikuti program, ruang, tutor, dan jam yang sama agar jadwal mudah diikuti siswa.
+                                Kelas berlangsung 2 kali seminggu selama periode belajar. Detail setiap pertemuan dapat dilihat pada daftar pertemuan mendatang.
                             </div>
                         </article>
 
@@ -198,81 +206,36 @@
                     </div>
                 @endif
 
-                <div class="border-t border-slate-100 bg-slate-50 px-6 py-5 md:px-8">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm font-bold text-slate-950">{{ $assignedSchedules->isNotEmpty() ? 'Jadwal sudah ditentukan' : 'Konsultasikan waktu belajar' }}</p>
-                            <p class="mt-1 text-sm text-slate-500">{{ $assignedSchedules->isNotEmpty() ? 'Hubungi admin jika ada perubahan jadwal yang perlu dikonsultasikan.' : 'Sampaikan hari dan jam yang tersedia agar admin dapat menyesuaikan kelas Anda.' }}</p>
-                        </div>
-                        <a href="{{ $adminWhatsappUrl }}" target="_blank" rel="noopener" class="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 text-sm font-bold text-white hover:bg-emerald-700">
-                            <svg class="h-5 w-5" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
-                                <path d="M16.01 3.2A12.71 12.71 0 0 0 5.16 22.54L3.6 28.8l6.41-1.5A12.76 12.76 0 1 0 16.01 3.2Zm0 23.25c-2.05 0-3.95-.59-5.57-1.61l-.4-.25-3.8.89.92-3.7-.26-.42a10.48 10.48 0 1 1 9.11 5.09Zm5.78-7.84c-.32-.16-1.89-.93-2.18-1.04-.29-.11-.5-.16-.72.16-.21.32-.82 1.04-1.01 1.25-.18.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.58-.95-.85-1.59-1.9-1.78-2.22-.18-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.18.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.72-1.73-.98-2.37-.26-.62-.52-.54-.72-.55h-.61c-.21 0-.56.08-.85.4-.29.32-1.12 1.09-1.12 2.66 0 1.57 1.15 3.09 1.31 3.3.16.21 2.26 3.45 5.48 4.84.77.33 1.37.53 1.84.68.77.24 1.47.21 2.02.13.62-.09 1.89-.77 2.16-1.52.27-.75.27-1.39.19-1.52-.08-.13-.29-.21-.61-.37Z" />
-                            </svg>
-                            Hubungi Admin
-                        </a>
-                    </div>
-                </div>
             </article>
 
             <aside class="space-y-6">
-                <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 class="text-lg font-extrabold text-slate-950">Ringkasan Siswa</h2>
-                    <div class="mt-5 divide-y divide-slate-100 rounded-xl border border-slate-100">
-                        <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
-                            <p class="text-sm font-semibold text-slate-500">Nama</p>
-                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $auth->name }}</p>
+                <article class="rounded-2xl border {{ $assignedSchedules->isNotEmpty() ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50' }} p-6">
+                    <div class="flex items-start gap-4">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white {{ $assignedSchedules->isNotEmpty() ? 'text-emerald-700' : 'text-amber-700' }}">
+                            <span class="material-symbols-outlined">{{ $assignedSchedules->isNotEmpty() ? 'event_available' : 'event_note' }}</span>
                         </div>
-                        <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
-                            <p class="text-sm font-semibold text-slate-500">Program</p>
-                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $program->name ?? '-' }}</p>
-                        </div>
-                        @if($auth->class_type)
-                            <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
-                                <p class="text-sm font-semibold text-slate-500">Jenis Kelas</p>
-                                <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $auth->class_type }}</p>
-                            </div>
-                        @endif
-                        <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
-                            <p class="text-sm font-semibold text-slate-500">Biaya</p>
-                            <p class="text-sm font-extrabold text-indigo-700 sm:text-right">{{ $priceText }}</p>
-                        </div>
-                        <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
-                            <p class="text-sm font-semibold text-slate-500">Skor Test</p>
-                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $requiresPlacementTest ? ($latestPlacementAttempt?->correct_answers . '/' . $latestPlacementAttempt?->total_questions . ' (' . $latestPlacementAttempt?->score_percentage . '%)') : 'Tidak diperlukan' }}</p>
-                        </div>
-                        <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
-                            <p class="text-sm font-semibold text-slate-500">Rekomendasi</p>
-                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $requiresPlacementTest ? $latestPlacementAttempt?->recommended_program : 'Mengikuti program yang dipilih' }}</p>
+                        <div>
+                            <h2 class="text-lg font-extrabold {{ $assignedSchedules->isNotEmpty() ? 'text-emerald-950' : 'text-amber-950' }}">
+                                {{ $assignedSchedules->isNotEmpty() ? 'Jadwal aktif' : 'Jadwal belum final' }}
+                            </h2>
+                            <p class="mt-2 text-sm font-semibold leading-6 {{ $assignedSchedules->isNotEmpty() ? 'text-emerald-800' : 'text-amber-800' }}">
+                                {{ $assignedSchedules->isNotEmpty() ? 'Jadwal ini sudah menjadi acuan belajar siswa. Jika ada perubahan mendesak, silakan hubungi admin.' : 'Pilih jadwal yang tersedia atau hubungi admin jika perlu menyesuaikan waktu belajar.' }}
+                            </p>
                         </div>
                     </div>
                 </article>
 
-                <article class="rounded-2xl border border-amber-100 bg-amber-50 p-6">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-white text-amber-700">
-                        <span class="material-symbols-outlined">event_available</span>
-                    </div>
-                    <h2 class="mt-4 text-lg font-extrabold text-amber-950">{{ $assignedSchedules->isNotEmpty() ? 'Jadwal sudah tersedia' : 'Jadwal belum final' }}</h2>
-                    <p class="mt-2 text-sm font-semibold leading-6 text-amber-800">
-                        {{ $assignedSchedules->isNotEmpty() ? 'Silakan ikuti jadwal yang sudah ditentukan admin setelah proses konsultasi.' : 'Pembayaran sudah disetujui dan placement test selesai. Jadwal belajar akan ditentukan setelah konsultasi dengan pihak les.' }}
+                <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <h2 class="text-lg font-extrabold text-slate-950">Bantuan Jadwal</h2>
+                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                        Gunakan tombol WhatsApp jika perlu konfirmasi ruang, tutor, atau perubahan jadwal mendesak.
                     </p>
-                </article>
-
-                <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 class="text-lg font-extrabold text-slate-950">Yang Perlu Dikonsultasikan</h2>
-                    <div class="mt-4 space-y-3 text-sm font-semibold text-slate-600">
-                        <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-[20px] text-indigo-600">calendar_month</span>
-                            Hari belajar yang paling cocok untuk siswa.
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-[20px] text-indigo-600">schedule</span>
-                            Jam belajar yang tersedia setelah sekolah atau aktivitas lain.
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-[20px] text-indigo-600">school</span>
-                            Penempatan kelas sesuai level hasil placement test.
-                        </div>
-                    </div>
+                    <a href="{{ $adminWhatsappUrl }}" target="_blank" rel="noopener" class="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 text-sm font-bold text-white hover:bg-emerald-700">
+                        <svg class="h-5 w-5" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+                            <path d="M16.01 3.2A12.71 12.71 0 0 0 5.16 22.54L3.6 28.8l6.41-1.5A12.76 12.76 0 1 0 16.01 3.2Zm0 23.25c-2.05 0-3.95-.59-5.57-1.61l-.4-.25-3.8.89.92-3.7-.26-.42a10.48 10.48 0 1 1 9.11 5.09Zm5.78-7.84c-.32-.16-1.89-.93-2.18-1.04-.29-.11-.5-.16-.72.16-.21.32-.82 1.04-1.01 1.25-.18.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.58-.95-.85-1.59-1.9-1.78-2.22-.18-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.18.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.72-1.73-.98-2.37-.26-.62-.52-.54-.72-.55h-.61c-.21 0-.56.08-.85.4-.29.32-1.12 1.09-1.12 2.66 0 1.57 1.15 3.09 1.31 3.3.16.21 2.26 3.45 5.48 4.84.77.33 1.37.53 1.84.68.77.24 1.47.21 2.02.13.62-.09 1.89-.77 2.16-1.52.27-.75.27-1.39.19-1.52-.08-.13-.29-.21-.61-.37Z" />
+                        </svg>
+                        Hubungi Admin
+                    </a>
                 </article>
             </aside>
         </section>

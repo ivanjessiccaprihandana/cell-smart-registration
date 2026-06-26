@@ -142,7 +142,7 @@
                         <span class="material-symbols-outlined">translate</span>
                     </div>
                     <div class="text-2xl font-bold text-slate-900">6 Kelas Inggris</div>
-                    <div class="mt-2 text-sm leading-6 text-slate-600">Kids, Teens, Adult, Conversation, TOEIC, dan TOEFL.</div>
+                    <div class="mt-2 text-sm leading-6 text-slate-600">Kids, Teens, Adult, TOEIC, dan TOEFL.</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -193,7 +193,6 @@
                         <li class="flex gap-2"><span class="material-symbols-outlined text-indigo-600">check_circle</span>English for Kids</li>
                         <li class="flex gap-2"><span class="material-symbols-outlined text-indigo-600">check_circle</span>English for Teens</li>
                         <li class="flex gap-2"><span class="material-symbols-outlined text-indigo-600">check_circle</span>English for Adult</li>
-                        <li class="flex gap-2"><span class="material-symbols-outlined text-indigo-600">check_circle</span>English Conversation</li>
                         <li class="flex gap-2"><span class="material-symbols-outlined text-indigo-600">check_circle</span>TOEIC</li>
                         <li class="flex gap-2"><span class="material-symbols-outlined text-indigo-600">check_circle</span>TOEFL</li>
                     </ul>
@@ -311,7 +310,7 @@
                                         <span class="{{ $loop->last ? 'text-indigo-600' : '' }}">{{ $breadcrumb }}</span>
                                     @endforeach
                                 </div>
-                                <h3 id="{{ $modalId }}Title" class="text-3xl font-bold text-slate-900">{{ $homeClass->modal_title }}</h3>
+                                <h3 id="{{ $modalId }}Title" class="text-3xl font-bold text-slate-900">{{ str_replace('Sub-Program', 'Program', $homeClass->modal_title) }}</h3>
                                 <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{{ $homeClass->modal_description }}</p>
                             </div>
 
@@ -375,7 +374,7 @@
                                 <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border-2 border-indigo-600 bg-indigo-50 text-xl font-bold text-indigo-700">EC</div>
                                 <p class="mx-auto mb-6 max-w-3xl text-lg italic leading-8 text-slate-600">"Belajar Bahasa Inggris jadi lebih menyenangkan karena materi dijelaskan pelan-pelan dan banyak latihan percakapan."</p>
                                 <h4 class="font-bold text-slate-900">Siswa CELL English Course</h4>
-                                <p class="text-sm text-slate-600">Program English Conversation</p>
+                                <p class="text-sm text-slate-600">Kelas Conversation</p>
                             </div>
                         </article>
 
@@ -423,7 +422,7 @@
             <div class="bg-indigo-600 rounded-3xl p-12 text-center text-white shadow-2xl relative overflow-hidden">
                 <div class="relative z-10">
                     <h2 class="text-3xl font-bold mb-4">Siap Bergabung di CELL English Course?</h2>
-                    <p class="text-lg text-indigo-100 mb-6 max-w-2xl mx-auto">Pilih program Bahasa Inggris, Conversation, atau BIMBEL sesuai kebutuhan belajar siswa.</p>
+                    <p class="text-lg text-indigo-100 mb-6 max-w-2xl mx-auto">Pilih program Bahasa Inggris, TOEIC/TOEFL, atau BIMBEL sesuai kebutuhan belajar siswa.</p>
                     <div class="flex flex-col justify-center gap-3 sm:flex-row">
                         <a href="{{ route('programs.quota') }}" class="inline-flex items-center justify-center px-8 py-3 bg-white text-indigo-700 rounded-lg font-semibold">Cek Kuota Sekarang</a>
                         <a href="{{ $adminWhatsappUrl }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-8 py-3 font-semibold text-white hover:bg-emerald-600">
@@ -451,7 +450,6 @@
                     <h4 class="font-bold text-slate-900 mb-5">Layanan</h4>
                     <ul class="space-y-3 text-sm font-medium text-slate-700">
                         <li><a href="#programs" class="hover:text-indigo-600 transition-colors">English for Kids</a></li>
-                        <li><a href="#programs" class="hover:text-indigo-600 transition-colors">English Conversation</a></li>
                         <li><a href="#programs" class="hover:text-indigo-600 transition-colors">TOEIC & TOEFL</a></li>
                         <li><a href="#programs" class="hover:text-indigo-600 transition-colors">BIMBEL TK-SMA</a></li>
                     </ul>

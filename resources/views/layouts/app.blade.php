@@ -50,7 +50,7 @@
                         <a class="hover:text-indigo-600 transition-colors" href="{{ route('placement-test') }}">Placement Test</a>
                     @endif
                     @if($canAccessClassSchedule)
-                        <a class="hover:text-indigo-600 transition-colors" href="{{ route('student.schedule') }}">Konsultasi Jadwal</a>
+                        <a class="hover:text-indigo-600 transition-colors" href="{{ route('student.schedule') }}">Jadwal Belajar</a>
                     @endif
                 @endauth
                 <a class="hover:text-indigo-600 transition-colors" href="{{ route('home') }}#contact">Kontak</a>
@@ -88,7 +88,7 @@
                                 <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('placement-test') }}">Placement Test</a>
                             @endif
                             @if($canAccessClassSchedule)
-                                <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('student.schedule') }}">Konsultasi Jadwal</a>
+                                <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('student.schedule') }}">Jadwal Belajar</a>
                             @endif
                         @endauth
                         <a class="block rounded-xl px-3 py-2 hover:bg-slate-100" href="{{ route('home') }}#contact">Kontak</a>

@@ -3,8 +3,9 @@
 @php
     $questions = $questions ?? collect();
     $latestAttempt = $latestAttempt ?? null;
-    $isRetry = request()->boolean('retry');
-    $showResult = $latestAttempt && !$isRetry;
+    $showResult = (bool) $latestAttempt;
+    $placementStartedAt = $placementStartedAt ?? now()->timestamp;
+    $remainingSeconds = $remainingSeconds ?? 30 * 60;
 @endphp
 
 @section('content')
@@ -51,6 +52,12 @@
             </div>
         </div>
 
+        @if($errors->any())
+            <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-bold text-rose-700">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
         @if($showResult)
             <section class="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-900/5">
                 <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
@@ -79,15 +86,15 @@
                 </div>
 
                 <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                    <a href="{{ route('placement-test', ['retry' => 1]) }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600">
-                        <span class="material-symbols-outlined text-[18px]">restart_alt</span>
-                        Ulangi Test
-                    </a>
                     <a href="{{ route('student.status') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
                         <span class="material-symbols-outlined text-[18px]">assignment_ind</span>
                         Kembali ke Status Saya
                     </a>
                 </div>
+
+                <p class="mx-auto mt-5 max-w-2xl text-xs font-semibold leading-5 text-slate-500">
+                    Jika terjadi kendala teknis dan perlu mengulang test, silakan hubungi admin agar akses test dibuka kembali.
+                </p>
             </section>
         @elseif($questions->isEmpty())
             <section class="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
@@ -100,9 +107,21 @@
         @else
             <form id="placementForm" method="POST" action="{{ route('placement-test.store') }}" class="grid gap-8 lg:grid-cols-[1fr_280px]">
                 @csrf
-                <input type="hidden" name="started_at" value="{{ now()->timestamp }}">
+                <input type="hidden" name="started_at" value="{{ $placementStartedAt }}">
 
                 <section>
+                    <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+                        <div class="flex gap-3">
+                            <span class="material-symbols-outlined mt-0.5 text-[22px] text-amber-700">wifi</span>
+                            <div>
+                                <p class="text-sm font-extrabold text-amber-800">Sebelum mulai test</p>
+                                <p class="mt-1 text-sm font-semibold leading-6 text-amber-800">
+                                    Waktu test tetap berjalan meskipun halaman ditutup atau dibuka ulang. Pastikan koneksi internet stabil, baterai perangkat cukup, dan jangan menutup halaman sampai jawaban dikirim. Jika ada kendala, admin dapat membuka ulang akses test.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-8">
                         <div class="mb-4 flex items-end justify-between gap-4">
                             <div>
@@ -183,7 +202,7 @@
         const nextButton = document.getElementById('nextButton');
         const timer = document.getElementById('timer');
         let currentQuestion = 0;
-        let remainingSeconds = 30 * 60;
+        let remainingSeconds = Number(@json($remainingSeconds));
 
         function answeredIndexes() {
             return new Set(radios.filter((radio) => radio.checked).map((radio) => Number(radio.dataset.questionIndex)));
