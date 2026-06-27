@@ -154,18 +154,14 @@
                         </div>
                     </div>
 
-                    <div class="mt-5 rounded-xl bg-slate-50 p-4">
-                        <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Rekomendasi Program</p>
-                        <p class="mt-2 text-sm font-bold leading-6 text-slate-800">{{ $latestPlacementAttempt->recommended_program }}</p>
-                    </div>
                     <a href="{{ route('student.schedule') }}" class="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
                         <span class="material-symbols-outlined text-[18px]">calendar_month</span>
-                        Konsultasi Jadwal
+                        Lihat Jadwal
                     </a>
                 @else
                     <div class="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm font-semibold leading-6 text-slate-600">
                         @if($canTakePlacement)
-                            Anda belum mengerjakan placement test. Kerjakan test untuk mendapatkan rekomendasi level belajar.
+                            Anda belum mengerjakan placement test. Kerjakan test untuk menentukan level belajar.
                         @else
                             Placement test akan terbuka setelah admin menyetujui bukti pembayaran Anda.
                         @endif

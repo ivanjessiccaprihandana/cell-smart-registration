@@ -118,7 +118,7 @@ class PlacementTestController extends Controller
             'correct_answers' => $correctAnswers,
             'score_percentage' => $scorePercentage,
             'level' => $placementLevel['level'],
-            'recommended_program' => $placementLevel['program'],
+            'recommended_program' => $placementLevel['level'],
             'answers' => $answerRows,
             'duration_seconds' => $durationSeconds,
         ]);
@@ -134,12 +134,12 @@ class PlacementTestController extends Controller
     private function placementLevel(int $scorePercentage): array
     {
         return match (true) {
-            $scorePercentage >= 90 => ['level' => 'Advanced', 'program' => 'Advanced English / Test Preparation'],
-            $scorePercentage >= 75 => ['level' => 'Upper-Intermediate', 'program' => 'TOEIC / TOEFL Preparation'],
-            $scorePercentage >= 60 => ['level' => 'Intermediate', 'program' => 'Conversation & Test Prep'],
-            $scorePercentage >= 45 => ['level' => 'Pre-Intermediate', 'program' => 'English Conversation'],
-            $scorePercentage >= 30 => ['level' => 'Elementary', 'program' => 'English for Teens Basic'],
-            default => ['level' => 'Beginner', 'program' => 'English Basic Class'],
+            $scorePercentage >= 90 => ['level' => 'Advanced'],
+            $scorePercentage >= 75 => ['level' => 'Upper-Intermediate'],
+            $scorePercentage >= 60 => ['level' => 'Intermediate'],
+            $scorePercentage >= 45 => ['level' => 'Pre-Intermediate'],
+            $scorePercentage >= 30 => ['level' => 'Elementary'],
+            default => ['level' => 'Beginner'],
         };
     }
 

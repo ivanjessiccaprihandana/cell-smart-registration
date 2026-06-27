@@ -288,6 +288,32 @@ class CellRegistrationFlowTest extends TestCase
         ]);
     }
 
+    public function test_adult_private_package_requires_placement_test(): void
+    {
+        $user = User::factory()->create(['payment_status' => 'diterima']);
+        $program = $this->createProgram('English for Adult', 'Bahasa Inggris');
+
+        $user->update([
+            'program' => (string) $program->id,
+            'class_type' => 'Private',
+            'private_package' => 'TOEFL Preparation',
+        ]);
+
+        PlacementQuestion::query()->delete();
+        $this->createPlacementQuestion(0);
+
+        $this->actingAs($user)
+            ->get(route('placement-test'))
+            ->assertOk()
+            ->assertSee('English Proficiency Test');
+
+        $this->actingAs($user)
+            ->get(route('student.status'))
+            ->assertOk()
+            ->assertSee('Belum Dikerjakan')
+            ->assertDontSee('Tidak Diperlukan');
+    }
+
     public function test_toeic_and_bimbel_do_not_require_placement_test(): void
     {
         $toeic = $this->createProgram('TOEIC', 'Test Preparation');
@@ -326,7 +352,7 @@ class CellRegistrationFlowTest extends TestCase
             'correct_answers' => 1,
             'score_percentage' => 100,
             'level' => 'Advanced',
-            'recommended_program' => 'Advanced English',
+            'recommended_program' => 'Advanced',
             'answers' => [],
             'duration_seconds' => 60,
         ]);
@@ -352,7 +378,7 @@ class CellRegistrationFlowTest extends TestCase
             'correct_answers' => 1,
             'score_percentage' => 50,
             'level' => 'Pre-Intermediate',
-            'recommended_program' => 'English Conversation',
+            'recommended_program' => 'Pre-Intermediate',
             'answers' => [],
             'duration_seconds' => 120,
         ]);

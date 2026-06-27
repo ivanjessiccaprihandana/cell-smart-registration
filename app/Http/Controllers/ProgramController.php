@@ -850,14 +850,12 @@ public function store(Request $request)
     {
         $category = Str::lower($program->category ?? '');
         $name = Str::lower($program->name);
-        $user = Auth::user();
 
         return !(
             $category === 'bimbel'
             || $category === 'test preparation'
             || Str::startsWith($name, 'bimbel')
             || in_array($name, ['toeic', 'toefl'], true)
-            || ($name === 'english for adult' && $user?->class_type === 'Private')
         );
     }
 

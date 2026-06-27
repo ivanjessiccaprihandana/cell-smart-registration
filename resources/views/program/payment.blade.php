@@ -30,7 +30,6 @@
         || $programCategory === 'test preparation'
         || \Illuminate\Support\Str::startsWith($programName, 'bimbel')
         || in_array($programName, ['toeic', 'toefl'], true)
-        || ($programName === 'english for adult' && $auth->class_type === 'Private')
     );
     $nextStepText = $requiresPlacementTest
         ? 'Setelah pembayaran disetujui, placement test akan terbuka.'

@@ -30,6 +30,13 @@
         'Tanpa Jenis Kelas' => 'bg-slate-100 text-slate-700',
     ];
     $selectedProgramName = $selectedProgram ? ($programLabels[$selectedProgram] ?? 'program ini') : null;
+    $classGroupKey = fn ($user) => $user->class_type === 'Private' && $user->private_package
+        ? 'Private - ' . $user->private_package
+        : ($user->class_type ?: 'Tanpa Jenis Kelas');
+    $classGroupLabel = fn ($key) => $classTypeLabels[$key] ?? $key;
+    $classGroupStyle = fn ($key) => str_starts_with($key, 'Private - ')
+        ? 'bg-violet-50 text-violet-700'
+        : ($classTypeStyles[$key] ?? 'bg-slate-100 text-slate-700');
 @endphp
 
 @section('content')
@@ -140,11 +147,14 @@
         @forelse($groupedRegistrants as $programId => $users)
             @php
                 $classTypeGroups = $users
-                    ->groupBy(fn ($user) => $user->class_type ?: 'Tanpa Jenis Kelas')
+                    ->groupBy(fn ($user) => $classGroupKey($user))
                     ->sortBy(function ($group, $classType) {
                         return [
                             'Reguler' => 10,
                             'Private' => 20,
+                            'Private - Conversation' => 21,
+                            'Private - TOEFL Preparation' => 22,
+                            'Private - TOEIC Preparation' => 23,
                             'Conversation' => 30,
                             'Tanpa Jenis Kelas' => 40,
                         ][$classType] ?? 99;
@@ -158,8 +168,8 @@
                             <p class="mt-1 text-sm text-slate-500">{{ $users->count() }} pendaftar pada program ini.</p>
                             <div class="mt-3 flex flex-wrap gap-2">
                                 @foreach($classTypeGroups as $classType => $classUsers)
-                                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold {{ $classTypeStyles[$classType] ?? 'bg-slate-100 text-slate-700' }}">
-                                        {{ $classTypeLabels[$classType] ?? $classType }}: {{ $classUsers->count() }}
+                                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold {{ $classGroupStyle($classType) }}">
+                                        {{ $classGroupLabel($classType) }}: {{ $classUsers->count() }}
                                     </span>
                                 @endforeach
                             </div>
@@ -177,12 +187,12 @@
                             <div class="bg-slate-50 px-6 py-4">
                                 <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                                     <div class="flex items-center gap-3">
-                                        <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold {{ $classTypeStyles[$classType] ?? 'bg-slate-100 text-slate-700' }}">
-                                            {{ $classTypeLabels[$classType] ?? $classType }}
+                                        <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold {{ $classGroupStyle($classType) }}">
+                                            {{ $classGroupLabel($classType) }}
                                         </span>
                                         <p class="text-sm font-bold text-slate-700">{{ $classUsers->count() }} peserta</p>
                                     </div>
-                                    <p class="text-xs font-semibold text-slate-500">Kelompok kelas {{ strtolower($classTypeLabels[$classType] ?? $classType) }}</p>
+                                    <p class="text-xs font-semibold text-slate-500">Kelompok kelas {{ strtolower($classGroupLabel($classType)) }}</p>
                                 </div>
                             </div>
 

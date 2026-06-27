@@ -85,6 +85,9 @@
                                 @if($user->class_type)
                                     <p class="mt-1 inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{{ $user->class_type }}</p>
                                 @endif
+                                @if($user->private_package)
+                                    <p class="mt-1 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{{ $user->private_package }}</p>
+                                @endif
                                 <p class="mt-1 max-w-xs truncate text-xs text-slate-500">{{ $user->address ?: '-' }}</p>
                             </td>
                             <td class="px-6 py-4">

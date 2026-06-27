@@ -277,6 +277,7 @@ class AdminController extends Controller
     public function programs()
     {
         $programs = Program::query()
+            ->whereNotIn('name', ['English Conversation', 'TOEIC', 'TOEFL'])
             ->where('name', 'not like', '% - Reguler')
             ->where('name', 'not like', '% - Private')
             ->where('name', 'not like', '% - Conversation')
@@ -518,6 +519,27 @@ class AdminController extends Controller
     {
         $weekStart = \Illuminate\Support\Carbon::parse($request->query('week', now()))
             ->startOfWeek();
+        $programs = Program::query()
+            ->where('status', 'active')
+            ->whereNotIn('name', ['English Conversation', 'TOEIC', 'TOEFL'])
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        $validProgramIds = $programs
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->all();
+        $selectedProgram = in_array((string) $request->query('program'), $validProgramIds, true)
+            ? (string) $request->query('program')
+            : null;
+        $scheduleTypeOptions = [
+            'reguler' => 'Reguler',
+            'private-conversation' => 'Private - Conversation',
+            'private-toefl' => 'Private - TOEFL Preparation',
+            'private-toeic' => 'Private - TOEIC Preparation',
+        ];
+        $selectedScheduleType = array_key_exists((string) $request->query('schedule_type'), $scheduleTypeOptions)
+            ? (string) $request->query('schedule_type')
+            : null;
         $dayNames = ['Mon' => 'Senin', 'Tue' => 'Selasa', 'Wed' => 'Rabu', 'Thu' => 'Kamis', 'Fri' => 'Jumat', 'Sat' => 'Sabtu', 'Sun' => 'Minggu'];
         $weekDays = collect(range(0, 6))->map(function (int $dayOffset) use ($weekStart, $dayNames) {
             $date = $weekStart->copy()->addDays($dayOffset);
@@ -533,6 +555,30 @@ class AdminController extends Controller
 
         $scheduleRows = ClassSchedule::with(['program', 'student', 'tutor', 'classRoom', 'scheduleTemplate'])
             ->whereBetween('class_date', [$weekStart->toDateString(), $weekStart->copy()->addDays(6)->toDateString()])
+            ->when($selectedProgram, fn ($query) => $query->where('program_id', $selectedProgram))
+            ->when($selectedScheduleType, function ($query) use ($selectedScheduleType) {
+                if ($selectedScheduleType === 'reguler') {
+                    $query
+                        ->where(function ($query) {
+                            $query->whereNull('class_type')
+                                ->orWhere('class_type', 'Reguler');
+                        })
+                        ->whereNull('private_package');
+
+                    return;
+                }
+
+                $privatePackage = match ($selectedScheduleType) {
+                    'private-conversation' => 'Conversation',
+                    'private-toefl' => 'TOEFL Preparation',
+                    'private-toeic' => 'TOEIC Preparation',
+                    default => null,
+                };
+
+                $query
+                    ->where('class_type', 'Private')
+                    ->where('private_package', $privatePackage);
+            })
             ->orderBy('class_date')
             ->orderBy('start_time')
             ->get();
@@ -578,6 +624,10 @@ class AdminController extends Controller
             'title' => 'Jadwal Belajar Siswa',
             'schedules' => $schedules,
             'totalStudents' => $schedules->sum(fn (ClassSchedule $schedule) => (int) $schedule->student_count),
+            'programs' => $programs,
+            'selectedProgram' => $selectedProgram,
+            'scheduleTypeOptions' => $scheduleTypeOptions,
+            'selectedScheduleType' => $selectedScheduleType,
             'weekDays' => $weekDays,
             'weekStart' => $weekStart,
             'previousWeek' => $weekStart->copy()->subWeek()->toDateString(),

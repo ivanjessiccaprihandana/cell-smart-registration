@@ -3,6 +3,13 @@
 @php
     $pageTitle = 'Jadwal Belajar Siswa';
     $scheduleStyle = 'border-indigo-200 bg-indigo-50 text-indigo-900';
+    $scheduleTitle = fn ($schedule) => trim(($schedule->program?->name ?? 'Program') . ($schedule->private_package ? ' - ' . $schedule->private_package : ''));
+    $scheduleType = fn ($schedule) => trim(($schedule->class_type ?: '-') . ($schedule->private_package ? ' / ' . $schedule->private_package : ''));
+    $programs = $programs ?? collect();
+    $selectedProgram = $selectedProgram ?? null;
+    $scheduleTypeOptions = $scheduleTypeOptions ?? [];
+    $selectedScheduleType = $selectedScheduleType ?? null;
+    $activeFilters = array_filter(['program' => $selectedProgram, 'schedule_type' => $selectedScheduleType]);
 @endphp
 
 @section('content')
@@ -28,14 +35,53 @@
     @endif
 
     <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <form method="GET" action="{{ route('admin.schedules.index') }}" class="grid gap-4 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end">
+            <input type="hidden" name="week" value="{{ $weekStart->toDateString() }}">
+
+            <div>
+                <label for="program" class="mb-2 block text-sm font-bold text-slate-800">Filter Program</label>
+                <select id="program" name="program"
+                    class="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
+                    <option value="">Semua program</option>
+                    @foreach($programs as $program)
+                        <option value="{{ $program->id }}" @selected((string) $selectedProgram === (string) $program->id)>{{ $program->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label for="schedule_type" class="mb-2 block text-sm font-bold text-slate-800">Jenis/Paket Jadwal</label>
+                <select id="schedule_type" name="schedule_type"
+                    class="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
+                    <option value="">Semua jenis/paket</option>
+                    @foreach($scheduleTypeOptions as $value => $label)
+                        <option value="{{ $value }}" @selected((string) $selectedScheduleType === (string) $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <button type="submit" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
+                <span class="material-symbols-outlined text-[20px]">filter_alt</span>
+                Tampilkan
+            </button>
+            <a href="{{ route('admin.schedules.index', ['week' => $weekStart->toDateString()]) }}" class="inline-flex h-12 items-center justify-center rounded-lg border border-slate-300 px-5 text-sm font-bold text-slate-700 hover:border-indigo-600 hover:text-indigo-600">Reset</a>
+        </form>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div class="flex items-center justify-between">
-            <a href="{{ route('admin.schedules.index', ['week' => $previousWeek]) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-500 hover:text-indigo-600" aria-label="Minggu sebelumnya">
+            <a href="{{ route('admin.schedules.index', array_merge(['week' => $previousWeek], $activeFilters)) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-500 hover:text-indigo-600" aria-label="Minggu sebelumnya">
                 <span class="material-symbols-outlined">chevron_left</span>
             </a>
-            <h3 class="text-lg font-extrabold text-slate-950">
-                {{ $weekStart->format('d M') }} - {{ $weekStart->copy()->addDays(6)->format('d M') }}
-            </h3>
-            <a href="{{ route('admin.schedules.index', ['week' => $nextWeek]) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-500 hover:text-indigo-600" aria-label="Minggu berikutnya">
+            <div class="text-center">
+                <h3 class="text-lg font-extrabold text-slate-950">
+                    {{ $weekStart->format('d M') }} - {{ $weekStart->copy()->addDays(6)->format('d M') }}
+                </h3>
+                @if($selectedProgram || $selectedScheduleType)
+                    <p class="mt-1 text-xs font-semibold text-slate-500">Menampilkan jadwal sesuai filter admin.</p>
+                @endif
+            </div>
+            <a href="{{ route('admin.schedules.index', array_merge(['week' => $nextWeek], $activeFilters)) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-500 hover:text-indigo-600" aria-label="Minggu berikutnya">
                 <span class="material-symbols-outlined">chevron_right</span>
             </a>
         </div>
@@ -65,9 +111,12 @@
                             <article class="rounded-xl border p-3 shadow-sm {{ $scheduleStyle }}">
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
-                                        <p class="text-sm font-extrabold leading-tight">{{ $schedule->program->name }}</p>
+                                        <p class="text-sm font-extrabold leading-tight">{{ $scheduleTitle($schedule) }}</p>
                                         @if($schedule->class_type)
                                             <p class="mt-1 inline-flex rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-extrabold text-indigo-700">{{ $schedule->class_type }}</p>
+                                        @endif
+                                        @if($schedule->private_package)
+                                            <p class="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-extrabold text-amber-700">{{ $schedule->private_package }}</p>
                                         @endif
                                     </div>
                                     <span class="rounded-full {{ $isFull ? 'bg-rose-50 text-rose-700' : 'bg-white/80 text-indigo-700' }} px-2 py-1 text-[11px] font-extrabold">
@@ -126,9 +175,12 @@
                         @endphp
                         <tr class="hover:bg-slate-50">
                             <td class="px-4 py-3">
-                                <p class="font-bold text-slate-950">{{ $schedule->program->name }}</p>
+                                <p class="font-bold text-slate-950">{{ $scheduleTitle($schedule) }}</p>
                                 @if($schedule->class_type)
                                     <p class="mt-1 inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{{ $schedule->class_type }}</p>
+                                @endif
+                                @if($schedule->private_package)
+                                    <p class="mt-1 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{{ $schedule->private_package }}</p>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-slate-600">
@@ -178,8 +230,8 @@
             'phone' => $student->phone ?: $student->whatsapp ?: '-',
         ])->values();
         $detail = [
-            'program' => $schedule->program->name,
-            'class_type' => $schedule->class_type ?: '-',
+            'program' => $scheduleTitle($schedule),
+            'class_type' => $scheduleType($schedule),
             'date' => $schedule->class_date->format('d M Y'),
             'time' => $schedule->start_time->format('H:i') . ' - ' . $schedule->end_time->format('H:i'),
             'room' => $schedule->classRoom?->name ?? $schedule->room ?: '-',

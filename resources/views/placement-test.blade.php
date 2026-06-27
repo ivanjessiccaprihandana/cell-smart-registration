@@ -39,7 +39,7 @@
             <div>
                 <p class="text-sm font-bold uppercase tracking-wide text-indigo-600">Placement Test</p>
                 <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">English Proficiency Test</h1>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Jawab soal berikut untuk mendapatkan rekomendasi level belajar. Hasilnya akan tersimpan dan bisa dilihat admin.</p>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Jawab soal berikut untuk menentukan level belajar. Hasilnya akan tersimpan dan bisa dilihat admin.</p>
             </div>
             <div class="flex items-center gap-3">
                 @unless($showResult)
@@ -80,8 +80,8 @@
                         <p class="mt-2 text-3xl font-extrabold text-slate-950">{{ $latestAttempt->score_percentage }}%</p>
                     </div>
                     <div class="rounded-2xl bg-indigo-50 p-5">
-                        <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">Rekomendasi</p>
-                        <p class="mt-2 text-lg font-extrabold text-indigo-700">{{ $latestAttempt->recommended_program }}</p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">Level</p>
+                        <p class="mt-2 text-lg font-extrabold text-indigo-700">{{ $latestAttempt->level }}</p>
                     </div>
                 </div>
 

@@ -8,7 +8,7 @@
         <div>
             <p class="text-sm font-semibold text-indigo-600">Placement Test</p>
             <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Hasil Placement Test</h2>
-            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Lihat skor, level rekomendasi, waktu pengerjaan, dan detail jawaban siswa.</p>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Lihat skor, level hasil test, waktu pengerjaan, dan detail jawaban siswa.</p>
         </div>
         <a href="{{ route('admin.placement.questions.index') }}" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700">
             <span class="material-symbols-outlined text-[20px]">quiz</span>
@@ -30,7 +30,6 @@
                         <th class="px-6 py-4">Siswa</th>
                         <th class="px-6 py-4">Skor</th>
                         <th class="px-6 py-4">Level</th>
-                        <th class="px-6 py-4">Rekomendasi</th>
                         <th class="px-6 py-4">Waktu</th>
                         <th class="px-6 py-4">Detail</th>
                         <th class="px-6 py-4">Aksi</th>
@@ -51,7 +50,6 @@
                             <td class="px-6 py-4">
                                 <span class="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{{ $attempt->level }}</span>
                             </td>
-                            <td class="px-6 py-4 font-semibold text-slate-700">{{ $attempt->recommended_program }}</td>
                             <td class="px-6 py-4 text-slate-600">
                                 @if($attempt->duration_seconds !== null)
                                     {{ floor($attempt->duration_seconds / 60) }} menit {{ $attempt->duration_seconds % 60 }} detik
@@ -108,7 +106,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center">
+                            <td colspan="6" class="px-6 py-12 text-center">
                                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
                                     <span class="material-symbols-outlined">assignment_turned_in</span>
                                 </div>
