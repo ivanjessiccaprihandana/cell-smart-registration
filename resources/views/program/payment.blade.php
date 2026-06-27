@@ -30,6 +30,7 @@
         || $programCategory === 'test preparation'
         || \Illuminate\Support\Str::startsWith($programName, 'bimbel')
         || in_array($programName, ['toeic', 'toefl'], true)
+        || ($programName === 'english for adult' && $auth->class_type === 'Private')
     );
     $nextStepText = $requiresPlacementTest
         ? 'Setelah pembayaran disetujui, placement test akan terbuka.'
@@ -116,7 +117,9 @@
                 <div class="border-b border-slate-100 px-6 py-5 md:border-b-0 md:border-r">
                     <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Kategori</p>
                     <p class="mt-2 text-sm font-extrabold text-slate-950">{{ $program->category ?: '-' }}</p>
-                    <p class="mt-1 text-xs font-semibold text-slate-500">{{ $auth->class_type ?: 'Reguler' }}</p>
+                    <p class="mt-1 text-xs font-semibold text-slate-500">
+                        {{ $auth->class_type ?: 'Reguler' }}{{ $auth->private_package ? ' - ' . $auth->private_package : '' }}
+                    </p>
                 </div>
 
                 <div class="border-b border-slate-100 px-6 py-5 md:border-b-0 md:border-r">

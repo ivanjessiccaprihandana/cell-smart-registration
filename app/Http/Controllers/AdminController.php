@@ -185,6 +185,7 @@ class AdminController extends Controller
         $classType = $this->programUsesClassType($program->name)
             ? ($validated['class_type'] ?? 'Reguler')
             : null;
+        $privatePackage = $classType === 'Private' ? ($validated['private_package'] ?? null) : null;
 
         $user->update([
             'name' => $validated['name'],
@@ -193,6 +194,7 @@ class AdminController extends Controller
             'address' => $validated['address'] ?? null,
             'program' => (string) $program->id,
             'class_type' => $classType,
+            'private_package' => $privatePackage,
             'payment_status' => $validated['payment_status'],
         ]);
 
@@ -212,6 +214,7 @@ class AdminController extends Controller
             $latestEnrollment->update([
                 'program_id' => $program->id,
                 'class_type' => $classType,
+                'private_package' => $privatePackage,
                 'status' => $enrollmentStatus,
             ]);
         } else {
@@ -219,6 +222,7 @@ class AdminController extends Controller
                 'user_id' => $user->id,
                 'program_id' => $program->id,
                 'class_type' => $classType,
+                'private_package' => $privatePackage,
                 'type' => 'new',
                 'enrolled_at' => now(),
                 'start_date' => now()->toDateString(),
@@ -261,6 +265,7 @@ class AdminController extends Controller
         $user->update([
             'program' => null,
             'class_type' => null,
+            'private_package' => null,
             'payment_status' => 'ditolak',
         ]);
 
@@ -306,6 +311,7 @@ class AdminController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'program' => ['required', Rule::exists('programs', 'id')->where('status', 'active')],
             'class_type' => ['nullable', Rule::in(array_keys($this->classTypes()))],
+            'private_package' => ['nullable', Rule::in(array_keys(Program::privatePackages()))],
             'payment_status' => ['required', Rule::in(array_keys($this->paymentStatuses()))],
         ]);
 
@@ -315,6 +321,16 @@ class AdminController extends Controller
             throw ValidationException::withMessages([
                 'class_type' => 'Jenis kelas wajib dipilih untuk program ini.',
             ]);
+        }
+
+        if (($validated['class_type'] ?? null) === 'Private' && !$program->allowsPrivatePackage($validated['private_package'] ?? null)) {
+            throw ValidationException::withMessages([
+                'private_package' => 'Paket private wajib dipilih untuk English for Adult.',
+            ]);
+        }
+
+        if (($validated['class_type'] ?? null) !== 'Private') {
+            $validated['private_package'] = null;
         }
 
         return $validated;
@@ -327,6 +343,7 @@ class AdminController extends Controller
             'classTypes' => $this->classTypes(),
             'paymentStatuses' => $this->paymentStatuses(),
             'programsWithClassType' => $this->programsWithClassType(),
+            'privatePackages' => Program::privatePackages(),
         ];
     }
 
@@ -795,6 +812,7 @@ class AdminController extends Controller
             'tutor_id' => ['nullable', Rule::exists('tutors', 'id')],
             'program_id' => ['required', Rule::exists('programs', 'id')],
             'class_type' => ['nullable', Rule::in(array_keys($this->classTypes()))],
+            'private_package' => ['nullable', Rule::in(array_keys(Program::privatePackages()))],
             'class_date' => ['required', 'date'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
@@ -805,9 +823,15 @@ class AdminController extends Controller
 
         $program = Program::findOrFail($validated['program_id']);
         $student = User::with('latestPlacementAttempt')->findOrFail($validated['user_id']);
-        $classType = in_array($program->name, $this->programsWithClassType(), true)
+        $classType = $program->usesClassType()
             ? ($validated['class_type'] ?? 'Reguler')
-            : null;
+            : 'Reguler';
+
+        if (!$program->allowsClassType($classType)) {
+            throw ValidationException::withMessages([
+                'class_type' => 'Jenis kelas ini tidak tersedia untuk program yang dipilih.',
+            ]);
+        }
 
         if ((string) $student->program !== (string) $program->id) {
             throw ValidationException::withMessages([
@@ -818,6 +842,20 @@ class AdminController extends Controller
         if ($classType && $student->class_type !== $classType) {
             throw ValidationException::withMessages([
                 'class_type' => 'Jenis kelas tidak sesuai dengan jenis kelas yang diambil siswa.',
+            ]);
+        }
+
+        $privatePackage = $classType === 'Private' ? ($validated['private_package'] ?? $student->private_package) : null;
+
+        if ($classType === 'Private' && !$program->allowsPrivatePackage($privatePackage)) {
+            throw ValidationException::withMessages([
+                'private_package' => 'Paket private wajib dipilih dan sesuai dengan pendaftaran siswa.',
+            ]);
+        }
+
+        if ($classType === 'Private' && $student->private_package && $student->private_package !== $privatePackage) {
+            throw ValidationException::withMessages([
+                'private_package' => 'Paket private tidak sesuai dengan paket yang diambil siswa.',
             ]);
         }
 
@@ -847,6 +885,7 @@ class AdminController extends Controller
         $classRoom = $this->validatedClassRoom($validated['class_room_id'] ?? null, $program);
 
         $validated['class_type'] = $classType;
+        $validated['private_package'] = $privatePackage;
         $validated['class_room_id'] = $classRoom?->id;
         $validated['room'] = $classRoom?->name ?? ($validated['room'] ?? null);
         $validated['max_students'] = $this->maxStudentsForClassType($classType);
@@ -863,6 +902,7 @@ class AdminController extends Controller
             'class_room_id' => $validated['class_room_id'] ?? null,
             'program_id' => $validated['program_id'],
             'class_type' => $validated['class_type'],
+            'private_package' => $validated['private_package'] ?? null,
             'class_date' => $validated['class_date'],
             'session_name' => 'Kelas Manual',
             'start_time' => $validated['start_time'],
@@ -879,6 +919,7 @@ class AdminController extends Controller
             'program_id' => ['required', Rule::exists('programs', 'id')],
             'tutor_id' => ['nullable', Rule::exists('tutors', 'id')],
             'class_type' => ['nullable', Rule::in(array_keys($this->classTypes()))],
+            'private_package' => ['nullable', Rule::in(array_keys(Program::privatePackages()))],
             'level' => ['nullable', Rule::in(array_keys($this->placementLevels()))],
             'batch_name' => ['nullable', 'string', 'max:255'],
             'registration_start_date' => ['nullable', 'date'],
@@ -912,6 +953,23 @@ class AdminController extends Controller
         }
 
         $validated['class_type'] = $usesClassType ? ($validated['class_type'] ?? 'Reguler') : null;
+
+        if ($usesClassType && !$program->allowsClassType($validated['class_type'])) {
+            throw ValidationException::withMessages([
+                'class_type' => 'Jenis kelas ini tidak tersedia untuk program yang dipilih.',
+            ]);
+        }
+
+        $validated['private_package'] = $validated['class_type'] === 'Private'
+            ? ($validated['private_package'] ?? null)
+            : null;
+
+        if ($validated['class_type'] === 'Private' && !$program->allowsPrivatePackage($validated['private_package'])) {
+            throw ValidationException::withMessages([
+                'private_package' => 'Paket private wajib dipilih untuk English for Adult.',
+            ]);
+        }
+
         $validated['batch_name'] = $validated['batch_name'] ?? null;
         $classRoom = $this->validatedClassRoom($validated['class_room_id'] ?? null, $program);
         $validated['tutor_id'] = $validated['tutor_id'] ?? null;
@@ -969,6 +1027,7 @@ class AdminController extends Controller
             'levels' => $this->placementLevels(),
             'dayLabels' => $this->dayLabels(),
             'programsWithClassType' => $this->programsWithClassType(),
+            'privatePackages' => Program::privatePackages(),
         ];
     }
 
@@ -992,10 +1051,21 @@ class AdminController extends Controller
     private function createMonthlySchedulesFromTemplate(User $user, ScheduleTemplate $template, string $startDate, ?string $endDate = null): int
     {
         $startDate = \Illuminate\Support\Carbon::parse($startDate)->startOfDay();
-        $endDate = $endDate
+        $template->loadMissing('program');
+        $targetMeetings = $template->program?->meetingCountForClassType(
+            $template->class_type ?: $user->class_type,
+            $template->private_package ?: $user->private_package
+        );
+        $endDate = $targetMeetings
+            ? $startDate->copy()->addYear()
+            : ($endDate
             ? \Illuminate\Support\Carbon::parse($endDate)->startOfDay()
-            : $startDate->copy()->addMonth()->subDay();
+            : $startDate->copy()->addMonth()->subDay());
         $dates = $this->datesForTemplateDays($startDate, $endDate, $template->days ?? []);
+
+        if ($targetMeetings) {
+            $dates = $dates->take($targetMeetings);
+        }
 
         foreach ($dates as $date) {
             ClassSchedule::firstOrCreate([
@@ -1008,6 +1078,7 @@ class AdminController extends Controller
                 'class_room_id' => $template->class_room_id,
                 'program_id' => $template->program_id,
                 'class_type' => $template->class_type,
+                'private_package' => $template->private_package,
                 'session_name' => $template->batch_name ?: 'Jadwal Belajar',
                 'end_time' => $template->end_time->format('H:i'),
                 'room' => $template->room,
@@ -1059,6 +1130,7 @@ class AdminController extends Controller
             'classRooms' => ClassRoom::query()->where('is_active', true)->orderBy('category')->orderBy('name')->get(),
             'classTypes' => $this->classTypes(),
             'programsWithClassType' => $this->programsWithClassType(),
+            'privatePackages' => Program::privatePackages(),
         ];
     }
 
@@ -1442,23 +1514,21 @@ class AdminController extends Controller
         return [
             'Reguler' => 'Reguler',
             'Private' => 'Private',
-            'Conversation' => 'Conversation',
         ];
     }
 
     private function programsWithClassType(): array
     {
         return [
-            'English for Kids',
-            'English for Teens',
             'English for Adult',
         ];
     }
 
     private function programUsesClassType(string $programName): bool
     {
-        return collect($this->programsWithClassType())
-            ->contains(fn (string $name) => Str::lower($name) === Str::lower($programName));
+        $program = Program::where('name', $programName)->first();
+
+        return $program?->usesClassType() ?? false;
     }
 
     private function placementLevels(): array

@@ -4,7 +4,7 @@
 @php
     $selectedProgram = (string) old('program', request('program', $auth->program ?? ''));
     $selectedClassType = old('class_type', $auth->class_type ?? 'Reguler');
-    $classTypeProgramNames = ['English for Kids', 'English for Teens', 'English for Adult'];
+    $selectedPrivatePackage = old('private_package', $auth->private_package ?? '');
     $paymentStatus = $auth->payment_status ?: 'belum_upload';
     $isChangingSelection = (bool) ($isChangingSelection ?? false);
     $canChangeProgramBeforePayment = filled($auth->program ?? null)
@@ -16,8 +16,7 @@
     $shouldLockProgram = $isProgramLocked && $selectedProgramModel;
     $shouldShowSelectedProgramSummary = $hasSelectedProgram;
     $programNameMatches = fn (string $actualName, string $expectedName) => \Illuminate\Support\Str::lower($actualName) === \Illuminate\Support\Str::lower($expectedName);
-    $usesClassType = fn (string $name) => collect($classTypeProgramNames)
-            ->contains(fn ($programName) => $programNameMatches($name, $programName));
+    $usesClassType = fn (string $name) => (bool) ($programs->first(fn ($item) => $programNameMatches($item->name, $name))?->usesClassType());
     $shouldDisableClassType = $shouldLockProgram;
     $selectedClassType = old('class_type', $auth->class_type ?? 'Reguler');
     $variantPrice = fn ($program, string $classType) => $program?->formattedPriceForClassType($classType, 'hubungi admin') ?? 'hubungi admin';
@@ -34,10 +33,17 @@
             'id' => (string) $program->id,
             'name' => $name,
             'option_label' => $name . ' - ' . $quotaLabel,
-            'class_type' => $usesClassType($program->name) ? '1' : '0',
+            'class_type' => $program->usesClassType() ? '1' : '0',
+            'available_class_types' => $program->availableClassTypes(),
+            'private_packages' => $program->usesClassType() ? \App\Models\Program::privatePackages() : [],
+            'meeting_counts' => collect($program->availableClassTypes())
+                ->mapWithKeys(fn ($classType) => [$classType => $program->meetingCountForClassType($classType, $classType === 'Private' ? 'Conversation' : null)])
+                ->all(),
+            'private_package_meeting_counts' => collect(\App\Models\Program::privatePackages())
+                ->mapWithKeys(fn ($label, $package) => [$package => $program->meetingCountForClassType('Private', $package)])
+                ->all(),
             'price_regular' => $variantPrice($program, 'Reguler'),
             'price_private' => $variantPrice($program, 'Private'),
-            'price_conversation' => $variantPrice($program, 'Conversation'),
             'is_full' => (bool) $program->is_full,
         ];
     };
@@ -46,15 +52,6 @@
             'label' => 'Kids & Teens',
             'description' => 'English for Kids, Teens, dan Adult.',
             'programs' => collect(['English for Kids', 'English for Teens', 'English for Adult'])
-                ->map(fn ($name) => $programChoiceForName($name))
-                ->filter()
-                ->values()
-                ->all(),
-        ],
-        'conversation-test' => [
-            'label' => 'Conversation & Test Prep',
-            'description' => 'Conversation, TOEIC, dan TOEFL.',
-            'programs' => collect(['English Conversation', 'TOEIC', 'TOEFL'])
                 ->map(fn ($name) => $programChoiceForName($name))
                 ->filter()
                 ->values()
@@ -108,9 +105,12 @@
             return [
                 'id' => (string) $template->id,
                 'program_id' => (string) $template->program_id,
+                'program_name' => $template->program?->name,
                 'class_type' => $template->class_type,
+                'private_package' => $template->private_package,
                 'level' => $template->level,
                 'batch_name' => $template->batch_name ?: 'Batch berjalan',
+                'meeting_count' => $template->program?->meetingCountForClassType($template->class_type, $template->private_package),
                 'learning_period' => $template->learning_start_date && $template->learning_end_date
                     ? $template->learning_start_date->format('d M Y') . ' - ' . $template->learning_end_date->format('d M Y')
                     : 'Periode belajar 1 bulan',
@@ -296,10 +296,13 @@
                                     <input id="program" name="program" type="hidden" value="{{ $selectedProgramModel->id }}"
                                         data-program-id="{{ $selectedProgramModel->id }}"
                                         data-program-name="{{ $selectedProgramModel->name }}"
-                                        data-class-type="{{ $usesClassType($selectedProgramModel->name) ? '1' : '0' }}"
+                                        data-class-type="{{ $selectedProgramModel->usesClassType() ? '1' : '0' }}"
+                                        data-available-class-types="{{ implode(',', $selectedProgramModel->availableClassTypes()) }}"
+                                        data-private-packages='@json($selectedProgramModel->usesClassType() ? \App\Models\Program::privatePackages() : [])'
+                                        data-meeting-counts='@json(collect($selectedProgramModel->availableClassTypes())->mapWithKeys(fn ($classType) => [$classType => $selectedProgramModel->meetingCountForClassType($classType, $classType === "Private" ? "Conversation" : null)])->all())'
+                                        data-private-package-meeting-counts='@json(collect(\App\Models\Program::privatePackages())->mapWithKeys(fn ($label, $package) => [$package => $selectedProgramModel->meetingCountForClassType("Private", $package)])->all())'
                                         data-price-regular="{{ $variantPrice($selectedProgramModel, 'Reguler') }}"
-                                        data-price-private="{{ $variantPrice($selectedProgramModel, 'Private') }}"
-                                        data-price-conversation="{{ $variantPrice($selectedProgramModel, 'Conversation') }}" />
+                                        data-price-private="{{ $variantPrice($selectedProgramModel, 'Private') }}" />
                                     <div class="rounded-lg border border-slate-200 bg-white px-4 py-4">
                                         <div class="flex items-start justify-between gap-4">
                                             <div>
@@ -362,11 +365,10 @@
 
                             <div id="classTypeWrapper" class="mt-5 hidden">
                                 <label for="classType" class="mb-2 block text-sm font-semibold text-slate-800">Jenis Kelas</label>
-                                <div class="grid gap-3 lg:grid-cols-3">
+                                <div class="grid gap-3 lg:grid-cols-2">
                                     @foreach([
-                                        'Reguler' => 'Kelas reguler bersama siswa lain.',
-                                        'Private' => 'Kelas privat dengan pendampingan lebih personal.',
-                                        'Conversation' => 'Fokus latihan speaking dan percakapan aktif.',
+                                        'Reguler' => 'Kelas reguler, minimal 2 siswa dalam 1 kelas.',
+                                        'Private' => 'Kelas privat 1 siswa dalam 1 kelas. Paket 25 pertemuan.',
                                     ] as $type => $description)
                                         <label class="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm transition has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50 {{ $shouldDisableClassType ? 'cursor-not-allowed opacity-75' : 'cursor-pointer' }}">
                                             <input type="radio" name="class_type" value="{{ $type }}" class="mt-1 h-4 w-4 text-indigo-600 disabled:cursor-not-allowed" @checked($selectedClassType === $type) @disabled($shouldDisableClassType)>
@@ -377,6 +379,24 @@
                                         </label>
                                     @endforeach
                                 </div>
+                            </div>
+
+                            <div id="privatePackageWrapper" class="mt-5 hidden">
+                                <label class="mb-2 block text-sm font-semibold text-slate-800">Paket Private</label>
+                                <div class="grid gap-3 lg:grid-cols-3">
+                                    @foreach(\App\Models\Program::privatePackages() as $package => $label)
+                                        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm transition has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50">
+                                            <input type="radio" name="private_package" value="{{ $package }}" class="mt-1 h-4 w-4 text-indigo-600" @checked($selectedPrivatePackage === $package)>
+                                            <span>
+                                                <span class="block font-bold text-slate-900">{{ $label }}</span>
+                                                <span class="mt-1 block text-xs font-medium leading-5 text-slate-500">Paket private 25 pertemuan.</span>
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @error('private_package')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <div class="mt-5 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
@@ -400,7 +420,7 @@
                                 @enderror
                             </div>
 
-                            <p class="mt-3 text-xs font-medium text-slate-500">Untuk English for Kids, Teens, dan Adult, pilih apakah kelasnya Reguler, Private, atau Conversation.</p>
+                            <p class="mt-3 text-xs font-medium text-slate-500">Private hanya tersedia untuk English for Adult. TOEFL, TOEIC, dan Conversation dipilih sebagai paket private.</p>
                             @if($shouldDisableClassType)
                                 <p class="mt-2 text-xs font-medium text-slate-500">
                                     {{ $shouldLockProgram ? 'Jenis kelas sudah tersimpan saat pendaftaran pertama.' : 'Jenis kelas mengikuti program yang dipilih.' }}
@@ -530,7 +550,9 @@
         const programCategoryInput = document.getElementById('programCategory');
         const programSubmenuInput = document.getElementById('programSubmenu');
         const classTypeWrapper = document.getElementById('classTypeWrapper');
+        const privatePackageWrapper = document.getElementById('privatePackageWrapper');
         const classTypeInputs = document.querySelectorAll('input[name="class_type"]');
+        const privatePackageInputs = document.querySelectorAll('input[name="private_package"]');
         const selectedPrice = document.getElementById('selectedPrice');
         const schedulePreferenceList = document.getElementById('schedulePreferenceList');
         const schedulePreferenceEmpty = document.getElementById('schedulePreferenceEmpty');
@@ -571,7 +593,10 @@
             const checkedClassType = document.querySelector('input[name="class_type"]:checked');
 
             if (!classTypeWrapper.classList.contains('hidden') && checkedClassType) {
-                return `${programText} - ${checkedClassType.value}`;
+                const packageText = selectedPrivatePackage();
+                return checkedClassType.value === 'Private' && packageText
+                    ? `${programText} - ${checkedClassType.value} - ${packageText}`
+                    : `${programText} - ${checkedClassType.value}`;
             }
 
             return programText;
@@ -579,6 +604,43 @@
 
         function selectedClassType() {
             return document.querySelector('input[name="class_type"]:checked')?.value || 'Reguler';
+        }
+
+        function selectedPrivatePackage() {
+            return document.querySelector('input[name="private_package"]:checked')?.value || '';
+        }
+
+        function availableClassTypesForSelectedProgram() {
+            const selectedProgram = currentProgramData();
+            const rawTypes = selectedProgram?.availableClassTypes || 'Reguler';
+
+            return String(rawTypes)
+                .split(',')
+                .map((type) => type.trim())
+                .filter(Boolean);
+        }
+
+        function meetingCountsForSelectedProgram() {
+            const selectedProgram = currentProgramData();
+
+            try {
+                return JSON.parse(selectedProgram?.meetingCounts || '{}');
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function ensureAllowedClassType() {
+            const availableTypes = availableClassTypesForSelectedProgram();
+            const checkedInput = document.querySelector('input[name="class_type"]:checked');
+
+            if (!checkedInput || !availableTypes.includes(checkedInput.value)) {
+                const fallbackInput = Array.from(classTypeInputs).find((input) => availableTypes.includes(input.value));
+
+                if (fallbackInput) {
+                    fallbackInput.checked = true;
+                }
+            }
         }
 
         function currentProgramData() {
@@ -644,9 +706,12 @@
                 option.disabled = Boolean(program.is_full) && selectedProgramId !== program.id;
                 option.dataset.programName = program.name;
                 option.dataset.classType = program.class_type;
+                option.dataset.availableClassTypes = (program.available_class_types || ['Reguler']).join(',');
+                option.dataset.privatePackages = JSON.stringify(program.private_packages || {});
+                option.dataset.meetingCounts = JSON.stringify(program.meeting_counts || {});
+                option.dataset.privatePackageMeetingCounts = JSON.stringify(program.private_package_meeting_counts || {});
                 option.dataset.priceRegular = program.price_regular;
                 option.dataset.pricePrivate = program.price_private;
-                option.dataset.priceConversation = program.price_conversation;
                 option.selected = selectedProgramId === program.id;
                 programSubmenuInput.appendChild(option);
             });
@@ -671,9 +736,26 @@
 
             return {
                 Private: selectedProgram.pricePrivate,
-                Conversation: selectedProgram.priceConversation,
                 Reguler: selectedProgram.priceRegular,
             }[selectedClassType()] || selectedProgram.priceRegular || 'hubungi admin';
+        }
+
+        function selectedPriceText() {
+            const basePrice = selectedProgramPrice();
+
+            if (!currentProgramData()) {
+                return basePrice;
+            }
+
+            if (selectedClassType() === 'Private') {
+                const packageName = selectedPrivatePackage();
+                const meetingCounts = privatePackageMeetingCountsForSelectedProgram();
+                const meetingCount = packageName ? meetingCounts[packageName] : null;
+
+                return `${basePrice}${meetingCount ? ' / ' + meetingCount + ' pertemuan' : ''}`;
+            }
+
+            return basePrice;
         }
 
         function selectedScheduleInput() {
@@ -687,6 +769,16 @@
 
         function availableScheduleTemplates() {
             return matchingScheduleTemplates().filter((template) => !template.is_full);
+        }
+
+        function privatePackageMeetingCountsForSelectedProgram() {
+            const selectedProgram = currentProgramData();
+
+            try {
+                return JSON.parse(selectedProgram?.privatePackageMeetingCounts || '{}');
+            } catch (error) {
+                return {};
+            }
         }
 
         function syncScheduleLimit() {
@@ -718,12 +810,16 @@
 
             const shouldUseClassType = selectedProgram?.classType === '1';
             const classType = shouldUseClassType ? selectedClassType() : '';
+            const privatePackage = classType === 'Private' ? selectedPrivatePackage() : '';
 
             return scheduleTemplateChoices.filter((template) => {
                 const matchesProgram = template.program_id === String(selectedProgram.value);
                 const matchesClassType = !shouldUseClassType || !template.class_type || template.class_type === classType;
+                const matchesPrivatePackage = classType === 'Private'
+                    ? template.private_package === privatePackage
+                    : !template.private_package;
 
-                return matchesProgram && matchesClassType;
+                return matchesProgram && matchesClassType && matchesPrivatePackage;
             });
         }
 
@@ -744,7 +840,7 @@
             } else if (templates.length > 0 && availableTemplates.length === 0) {
                 schedulePreferenceEmpty.textContent = 'Semua jadwal untuk program dan jenis kelas ini sudah penuh. Silakan pilih jenis kelas lain atau hubungi admin.';
             } else {
-                schedulePreferenceEmpty.textContent = 'Belum ada jadwal belajar untuk program dan jenis kelas ini. Admin masih bisa menghubungi Anda untuk konsultasi jadwal.';
+                schedulePreferenceEmpty.textContent = 'Belum ada jadwal belajar untuk pilihan ini. Admin dapat menambahkan batch jadwal dari panel admin.';
             }
 
             templates.forEach((template) => {
@@ -758,7 +854,7 @@
                 radio.required = !template.is_full;
                 radio.disabled = Boolean(template.is_full);
                 radio.className = 'mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500';
-                radio.dataset.label = `${template.batch_name} - ${template.days}, ${template.time}`;
+                radio.dataset.label = `${template.program_name || 'Program'}${template.private_package ? ' - ' + template.private_package : ''} / ${template.days}, ${template.time}`;
                 radio.checked = !template.is_full && selectedId === template.id;
                 radio.addEventListener('change', syncScheduleLimit);
 
@@ -767,11 +863,11 @@
 
                 const title = document.createElement('span');
                 title.className = 'block font-bold text-slate-900';
-                title.textContent = `${template.batch_name} - ${template.days}, ${template.time}${template.is_full ? ' - Penuh' : ''}`;
+                title.textContent = `${template.program_name || 'Program'}${template.class_type ? ' - ' + template.class_type : ''}${template.private_package ? ' - ' + template.private_package : ''}${template.is_full ? ' - Penuh' : ''}`;
 
                 const detail = document.createElement('span');
                 detail.className = 'mt-1 block text-xs font-medium leading-5 text-slate-500';
-                detail.textContent = `${template.learning_period} / ${template.room}${template.tutor ? ' / Tutor: ' + template.tutor : ''}${template.level ? ' / Level: ' + template.level : ''} / ${template.remaining_seats} dari ${template.max_students} kursi tersedia`;
+                detail.textContent = `Jadwal: ${template.days}, ${template.time} / ${template.meeting_count ? 'Paket: ' + template.meeting_count + ' pertemuan / ' : ''}Periode: ${template.learning_period} / Ruang: ${template.room}${template.tutor ? ' / Tutor: ' + template.tutor : ''}${template.level ? ' / Level: ' + template.level : ''} / Kuota: ${template.remaining_seats} dari ${template.max_students} kursi tersedia`;
                 if (template.is_full) {
                     label.classList.add('cursor-not-allowed', 'opacity-70');
                     label.classList.remove('cursor-pointer');
@@ -794,15 +890,27 @@
 
             const selectedProgram = currentProgramData();
             const shouldShowClassType = selectedProgram?.classType === '1';
+            const availableTypes = availableClassTypesForSelectedProgram();
+            const shouldShowPrivatePackage = shouldShowClassType && selectedClassType() === 'Private';
 
             classTypeWrapper.classList.toggle('hidden', !shouldShowClassType);
+            privatePackageWrapper?.classList.toggle('hidden', !shouldShowPrivatePackage);
+            ensureAllowedClassType();
             classTypeInputs.forEach(function (input) {
+                const isAllowed = availableTypes.includes(input.value);
+                const label = input.closest('label');
+
                 input.required = shouldShowClassType;
-                input.disabled = shouldDisableClassType || isProgramLocked || !shouldShowClassType;
+                input.disabled = shouldDisableClassType || isProgramLocked || !shouldShowClassType || !isAllowed;
+                label?.classList.toggle('hidden', shouldShowClassType && !isAllowed);
+            });
+            privatePackageInputs.forEach(function (input) {
+                input.required = shouldShowPrivatePackage;
+                input.disabled = !shouldShowPrivatePackage || isProgramLocked;
             });
 
             if (selectedPrice) {
-                selectedPrice.textContent = selectedProgramPrice();
+                selectedPrice.textContent = selectedPriceText();
             }
 
             renderSchedulePreferences();
@@ -814,13 +922,18 @@
             document.getElementById('confirmEmail').textContent = emailInput.value || '-';
             document.getElementById('confirmWhatsapp').textContent = whatsappInput.value ? '+62 ' + whatsappInput.value : '-';
             document.getElementById('confirmProgram').textContent = selectedProgramText();
-            document.getElementById('confirmPrice').textContent = selectedProgramPrice();
+            document.getElementById('confirmPrice').textContent = selectedPriceText();
             document.getElementById('confirmSchedule').textContent = selectedScheduleTexts().join(' | ') || 'Belum memilih jadwal belajar';
             document.getElementById('confirmAddress').textContent = addressInput.value || '-';
         }
 
         function goToConfirmation() {
             if (!form.reportValidity()) {
+                return;
+            }
+
+            if (selectedClassType() === 'Private' && !selectedPrivatePackage()) {
+                privatePackageWrapper?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
 
@@ -890,6 +1003,9 @@
         });
         programSubmenuInput?.addEventListener('change', updateProgramSelection);
         classTypeInputs.forEach(function (input) {
+            input.addEventListener('change', updateProgramSelection);
+        });
+        privatePackageInputs.forEach(function (input) {
             input.addEventListener('change', updateProgramSelection);
         });
         if (programCategoryInput && initialProgramGroup) {

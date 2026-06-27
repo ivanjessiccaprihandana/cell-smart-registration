@@ -37,34 +37,6 @@
             ],
         ],
         [
-            'breadcrumb' => 'Conversation & Test Prep',
-            'title' => 'Pilih Program Conversation atau Test Preparation',
-            'description' => 'Pilih program sesuai target speaking, TOEIC, atau TOEFL.',
-            'programs' => [
-                [
-                    'name' => 'English Conversation',
-                    'age' => 'Speaking',
-                    'icon' => 'record_voice_over',
-                    'description' => 'Latihan percakapan aktif untuk meningkatkan kelancaran dan kepercayaan diri.',
-                    'features' => ['Speaking drill', 'Role play', 'Active conversation'],
-                ],
-                [
-                    'name' => 'TOEIC',
-                    'age' => 'TOEIC',
-                    'icon' => 'workspace_premium',
-                    'description' => 'Persiapan TOEIC dengan latihan soal dan strategi pengerjaan.',
-                    'features' => ['Listening', 'Reading', 'Test strategy'],
-                ],
-                [
-                    'name' => 'TOEFL',
-                    'age' => 'TOEFL',
-                    'icon' => 'school',
-                    'description' => 'Persiapan TOEFL untuk kebutuhan akademik dan tes kemampuan bahasa.',
-                    'features' => ['Structure', 'Reading', 'Listening'],
-                ],
-            ],
-        ],
-        [
             'breadcrumb' => 'BIMBEL',
             'title' => 'Pilih Program BIMBEL Sekolah',
             'description' => 'Pilih jenjang bimbingan belajar sesuai kebutuhan siswa.',

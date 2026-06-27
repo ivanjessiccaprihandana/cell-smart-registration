@@ -5,6 +5,7 @@
     $registrant = $registrant ?? null;
     $programs = $programs ?? collect();
     $classTypes = $classTypes ?? [];
+    $privatePackages = $privatePackages ?? [];
     $paymentStatuses = $paymentStatuses ?? [];
     $programsWithClassType = $programsWithClassType ?? [];
 @endphp
@@ -90,8 +91,21 @@
                         <option value="{{ $value }}" @selected(old('class_type', $registrant->class_type) === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
-                <p class="mt-2 text-xs font-medium text-slate-500">Dipakai untuk program English yang punya Reguler, Private, atau Conversation.</p>
+                <p class="mt-2 text-xs font-medium text-slate-500">Private hanya tersedia untuk English for Adult.</p>
                 @error('class_type')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
+            </div>
+
+            <div id="privatePackageField">
+                <label for="private_package" class="mb-2 block text-sm font-bold text-slate-800">Paket Private</label>
+                <select id="private_package" name="private_package"
+                    class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
+                    <option value="">Pilih paket private...</option>
+                    @foreach($privatePackages as $value => $label)
+                        <option value="{{ $value }}" @selected(old('private_package', $registrant->private_package) === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-2 text-xs font-medium text-slate-500">Untuk English for Adult kelas Private: Conversation, TOEFL Preparation, atau TOEIC Preparation.</p>
+                @error('private_package')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
             </div>
         </div>
 
@@ -134,6 +148,8 @@
         const programSelect = document.getElementById('program');
         const classTypeField = document.getElementById('classTypeField');
         const classTypeSelect = document.getElementById('class_type');
+        const privatePackageField = document.getElementById('privatePackageField');
+        const privatePackageSelect = document.getElementById('private_package');
 
         const syncClassTypeField = () => {
             const selectedOption = programSelect.options[programSelect.selectedIndex];
@@ -146,9 +162,23 @@
             } else if (!classTypeSelect.value) {
                 classTypeSelect.value = 'Reguler';
             }
+
+            syncPrivatePackageField();
+        };
+
+        const syncPrivatePackageField = () => {
+            const isPrivate = !classTypeField.classList.contains('hidden') && classTypeSelect.value === 'Private';
+
+            privatePackageField.classList.toggle('hidden', !isPrivate);
+            privatePackageSelect.disabled = !isPrivate;
+
+            if (!isPrivate) {
+                privatePackageSelect.value = '';
+            }
         };
 
         programSelect.addEventListener('change', syncClassTypeField);
+        classTypeSelect.addEventListener('change', syncPrivatePackageField);
         syncClassTypeField();
     });
 </script>

@@ -197,6 +197,62 @@ class CellRegistrationFlowTest extends TestCase
         $this->assertGreaterThan(0, ClassSchedule::where('user_id', $student->id)->count());
     }
 
+    public function test_adult_private_toefl_package_payment_creates_twenty_five_meetings(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $student = User::factory()->create([
+            'payment_status' => 'menunggu_verifikasi',
+            'payment_proof_path' => 'payment-proofs/bukti.png',
+        ]);
+        $program = $this->createProgram('English for Adult', 'Bahasa Inggris');
+        $program->update(['private_price' => 2499000]);
+        $template = $this->createScheduleTemplate($program, 'Private', 'English Room 3', 1);
+        $template->update([
+            'private_package' => 'TOEFL Preparation',
+            'learning_end_date' => now()->addMonths(4)->toDateString(),
+        ]);
+
+        $student->update([
+            'program' => (string) $program->id,
+            'class_type' => 'Private',
+            'private_package' => 'TOEFL Preparation',
+        ]);
+
+        ProgramEnrollment::create([
+            'user_id' => $student->id,
+            'program_id' => $program->id,
+            'class_type' => 'Private',
+            'private_package' => 'TOEFL Preparation',
+            'type' => 'new',
+            'enrolled_at' => now(),
+            'start_date' => $template->learning_start_date,
+            'end_date' => $template->learning_start_date->copy()->addMonths(3),
+            'status' => 'pending',
+        ]);
+
+        SchedulePreference::create([
+            'user_id' => $student->id,
+            'schedule_template_id' => $template->id,
+            'priority' => 1,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.payments.update', $student), [
+                'payment_status' => 'diterima',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(25, ClassSchedule::where('user_id', $student->id)->count());
+        $this->assertDatabaseHas('class_schedules', [
+            'user_id' => $student->id,
+            'program_id' => $program->id,
+            'class_type' => 'Private',
+            'private_package' => 'TOEFL Preparation',
+            'max_students' => 1,
+        ]);
+    }
+
     public function test_english_program_requires_placement_test_and_stores_result(): void
     {
         $user = User::factory()->create(['payment_status' => 'diterima']);

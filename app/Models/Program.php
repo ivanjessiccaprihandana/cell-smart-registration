@@ -99,7 +99,6 @@ class Program extends Model
     {
         return match ($classType) {
             'Private' => $this->private_price ?? $this->price,
-            'Conversation' => $this->conversation_price ?? $this->price,
             default => $this->price,
         };
     }
@@ -109,6 +108,56 @@ class Program extends Model
         $price = $this->priceForClassType($classType);
 
         return $price !== null ? 'Rp ' . number_format($price, 0, ',', '.') : $fallback;
+    }
+
+    public function availableClassTypes(): array
+    {
+        $name = str($this->name)->lower()->toString();
+        $category = str($this->category ?? '')->lower()->toString();
+
+        if ($category === 'bimbel' || str_starts_with($name, 'bimbel')) {
+            return ['Reguler'];
+        }
+
+        if ($name === 'english for adult') {
+            return ['Reguler', 'Private'];
+        }
+
+        return ['Reguler'];
+    }
+
+    public function usesClassType(): bool
+    {
+        return count($this->availableClassTypes()) > 1 || $this->availableClassTypes() !== ['Reguler'];
+    }
+
+    public function allowsClassType(?string $classType): bool
+    {
+        return in_array($classType ?: 'Reguler', $this->availableClassTypes(), true);
+    }
+
+    public static function privatePackages(): array
+    {
+        return [
+            'Conversation' => 'Conversation',
+            'TOEFL Preparation' => 'TOEFL Preparation',
+            'TOEIC Preparation' => 'TOEIC Preparation',
+        ];
+    }
+
+    public function allowsPrivatePackage(?string $privatePackage): bool
+    {
+        return str($this->name)->lower()->toString() === 'english for adult'
+            && in_array($privatePackage, array_keys(self::privatePackages()), true);
+    }
+
+    public function meetingCountForClassType(?string $classType = null, ?string $privatePackage = null): ?int
+    {
+        if (($classType ?: 'Reguler') === 'Private' && $this->allowsPrivatePackage($privatePackage)) {
+            return 25;
+        }
+
+        return null;
     }
 
     public function classTypeVariant(): ?array

@@ -85,6 +85,9 @@
                                     @if($template->class_type)
                                         <span class="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{{ $template->class_type }}</span>
                                     @endif
+                                    @if($template->private_package)
+                                        <span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{{ $template->private_package }}</span>
+                                    @endif
                                     @if($template->level)
                                         <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700">{{ $template->level }}</span>
                                     @endif

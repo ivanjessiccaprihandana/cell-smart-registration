@@ -78,12 +78,9 @@
                             </td>
                             <td class="px-6 py-4 font-bold text-slate-900">
                                 <div>{{ $program->formattedPriceForClassType(null) }}</div>
-                                @if($program->private_price !== null || $program->conversation_price !== null)
+                                @if($program->private_price !== null)
                                     <div class="mt-1 text-xs font-semibold text-slate-500">
-                                        Private: {{ $program->formattedPriceForClassType('Private') }}
-                                    </div>
-                                    <div class="text-xs font-semibold text-slate-500">
-                                        Conversation: {{ $program->formattedPriceForClassType('Conversation') }}
+                                        Private: {{ $program->formattedPriceForClassType('Private') }} / 25 pertemuan
                                     </div>
                                 @endif
                             </td>

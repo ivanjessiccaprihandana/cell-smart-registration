@@ -14,6 +14,7 @@ class ProgramEnrollment extends Model
         'user_id',
         'program_id',
         'class_type',
+        'private_package',
         'type',
         'enrolled_at',
         'start_date',

@@ -83,19 +83,6 @@
     </div>
 
     <div>
-        <label for="conversation_price" class="mb-2 block text-sm font-bold text-slate-800">Harga Conversation</label>
-        <div class="flex">
-            <span class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-100 px-4 text-sm font-bold text-slate-600">Rp</span>
-            <input id="conversation_price" name="conversation_price" type="number" min="0" value="{{ old('conversation_price', $program->conversation_price ?? '') }}"
-                class="w-full rounded-r-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
-                placeholder="Kosongkan jika sama dengan reguler" />
-        </div>
-        @error('conversation_price')
-            <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
-        @enderror
-    </div>
-
-    <div>
         <label for="start_date" class="mb-2 block text-sm font-bold text-slate-800">Tanggal Mulai</label>
         <input id="start_date" name="start_date" type="datetime-local"
             value="{{ old('start_date', isset($program) && $program->start_date ? $program->start_date->format('Y-m-d\TH:i') : '') }}"

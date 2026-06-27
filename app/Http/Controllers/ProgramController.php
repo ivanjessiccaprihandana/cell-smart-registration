@@ -334,17 +334,32 @@ public function store(Request $request)
             'required',
             Rule::exists('programs', 'id')->where('status', 'active'),
         ],
-        'class_type' => ['nullable', Rule::in(['Reguler', 'Private', 'Conversation'])],
-        'schedule_template_id' => ['nullable', Rule::exists('schedule_templates', 'id')],
-    ]);
+            'class_type' => ['nullable', Rule::in(['Reguler', 'Private'])],
+            'private_package' => ['nullable', Rule::in(array_keys(Program::privatePackages()))],
+            'schedule_template_id' => ['nullable', Rule::exists('schedule_templates', 'id')],
+        ]);
 
     $selectedProgram = Program::findOrFail($request->program);
-    $classType = $this->programUsesClassType($selectedProgram->name)
+    $classType = $selectedProgram->usesClassType()
         ? ($request->class_type ?: 'Reguler')
-        : null;
+        : 'Reguler';
+
+    if (!$selectedProgram->allowsClassType($classType)) {
+        return back()
+            ->withErrors(['class_type' => 'Jenis kelas ini tidak tersedia untuk program yang dipilih.'])
+            ->withInput();
+    }
+
+    $privatePackage = $classType === 'Private' ? $request->input('private_package') : null;
+
+    if ($classType === 'Private' && !$selectedProgram->allowsPrivatePackage($privatePackage)) {
+        return back()
+            ->withErrors(['private_package' => 'Pilih paket private yang tersedia untuk English for Adult.'])
+            ->withInput();
+    }
     $selectedScheduleTemplateId = $request->input('schedule_template_id');
 
-    $matchingScheduleTemplates = $this->matchingRegistrationScheduleTemplates($selectedProgram, $classType, false);
+    $matchingScheduleTemplates = $this->matchingRegistrationScheduleTemplates($selectedProgram, $classType, false, $privatePackage);
     $availableScheduleTemplates = $matchingScheduleTemplates->filter(fn (ScheduleTemplate $template) => $template->hasSeatForUser($user->id))->values();
     $validScheduleTemplateIds = $availableScheduleTemplates
         ->pluck('id')
@@ -371,7 +386,8 @@ public function store(Request $request)
     $program = $selectedProgram;
     $currentProgram = (string) $user->program;
     $currentClassType = $user->class_type;
-    $programChanged = $currentProgram !== (string) $program->id || $currentClassType !== $classType;
+    $currentPrivatePackage = $user->private_package;
+    $programChanged = $currentProgram !== (string) $program->id || $currentClassType !== $classType || $currentPrivatePackage !== $privatePackage;
 
     if ($program->isFull() && $currentProgram !== (string) $program->id) {
         return back()
@@ -384,6 +400,7 @@ public function store(Request $request)
         'address' => $request->address,
         'program' => (string) $program->id,
         'class_type' => $classType,
+        'private_package' => $privatePackage,
         'payment_proof_path' => null,
         'payment_status' => 'belum_upload',
         'registration_expires_at' => now()->addHours(12),
@@ -405,6 +422,7 @@ public function store(Request $request)
         'user_id' => $user->id,
         'program_id' => $program->id,
         'class_type' => $classType,
+        'private_package' => $privatePackage,
         'type' => 'new',
         'enrolled_at' => now(),
         'start_date' => $period['start_date'],
@@ -549,6 +567,7 @@ public function store(Request $request)
             'user_id' => $user->id,
             'program_id' => $program->id,
             'class_type' => $user->class_type,
+            'private_package' => $user->private_package,
             'type' => 'renewal',
             'enrolled_at' => now(),
             'start_date' => $period['start_date'],
@@ -660,6 +679,7 @@ public function store(Request $request)
         $user->update([
             'program' => null,
             'class_type' => null,
+            'private_package' => null,
             'payment_status' => 'belum_upload',
             'registration_expires_at' => null,
         ]);
@@ -693,9 +713,6 @@ public function store(Request $request)
             'English for Kids' => 10,
             'English for Teens' => 20,
             'English for Adult' => 30,
-            'English Conversation' => 35,
-            'TOEIC' => 40,
-            'TOEFL' => 50,
             'BIMBEL TK' => 60,
             'BIMBEL SD' => 70,
             'BIMBEL SMP' => 80,
@@ -706,8 +723,6 @@ public function store(Request $request)
     private function programsWithClassType(): array
     {
         return [
-            'English for Kids',
-            'English for Teens',
             'English for Adult',
         ];
     }
@@ -724,7 +739,6 @@ public function store(Request $request)
         return [
             'Reguler' => (int) $counts->get('Reguler', 0),
             'Private' => (int) $counts->get('Private', 0),
-            'Conversation' => (int) $counts->get('Conversation', 0),
         ];
     }
 
@@ -753,6 +767,14 @@ public function store(Request $request)
                     ->whereNull('class_type')
                     ->orWhere('class_type', $user->class_type);
             })
+            ->where(function ($query) use ($user) {
+                if ($user->class_type === 'Private') {
+                    $query->where('private_package', $user->private_package);
+                    return;
+                }
+
+                $query->whereNull('private_package');
+            })
             ->where(function ($query) use ($level) {
                 $query
                     ->whereNull('level')
@@ -764,7 +786,7 @@ public function store(Request $request)
             ->values();
     }
 
-    private function matchingRegistrationScheduleTemplates(Program $program, ?string $classType, bool $onlyAvailable = true)
+    private function matchingRegistrationScheduleTemplates(Program $program, ?string $classType, bool $onlyAvailable = true, ?string $privatePackage = null)
     {
         $templates = ScheduleTemplate::with('preferences')
             ->where('is_active', true)
@@ -789,6 +811,14 @@ public function store(Request $request)
                     ->whereNull('class_type')
                     ->when($classType, fn ($query) => $query->orWhere('class_type', $classType));
             })
+            ->where(function ($query) use ($classType, $privatePackage) {
+                if ($classType === 'Private') {
+                    $query->where('private_package', $privatePackage);
+                    return;
+                }
+
+                $query->whereNull('private_package');
+            })
             ->get();
 
         return $onlyAvailable
@@ -811,20 +841,23 @@ public function store(Request $request)
 
     private function programUsesClassType(string $programName): bool
     {
-        return collect($this->programsWithClassType())
-            ->contains(fn (string $name) => Str::lower($name) === Str::lower($programName));
+        $program = Program::where('name', $programName)->first();
+
+        return $program?->usesClassType() ?? false;
     }
 
     private function programRequiresPlacementTest(Program $program): bool
     {
         $category = Str::lower($program->category ?? '');
         $name = Str::lower($program->name);
+        $user = Auth::user();
 
         return !(
             $category === 'bimbel'
             || $category === 'test preparation'
             || Str::startsWith($name, 'bimbel')
             || in_array($name, ['toeic', 'toefl'], true)
+            || ($name === 'english for adult' && $user?->class_type === 'Private')
         );
     }
 
@@ -842,6 +875,21 @@ public function store(Request $request)
 
     private function enrollmentPeriodForScheduleTemplate(Program $program, ScheduleTemplate $template): array
     {
+        $meetingCount = $program->meetingCountForClassType($template->class_type, $template->private_package);
+
+        if ($meetingCount && $template->learning_start_date) {
+            $endDate = $this->nthDateForTemplateDays(
+                $template->learning_start_date->copy(),
+                $template->days ?? [],
+                $meetingCount
+            );
+
+            return [
+                'start_date' => $template->learning_start_date->toDateString(),
+                'end_date' => $endDate->toDateString(),
+            ];
+        }
+
         if ($template->learning_start_date && $template->learning_end_date) {
             return [
                 'start_date' => $template->learning_start_date->toDateString(),
@@ -850,6 +898,25 @@ public function store(Request $request)
         }
 
         return $this->monthlyEnrollmentPeriod($program);
+    }
+
+    private function nthDateForTemplateDays(Carbon $startDate, array $days, int $targetCount): Carbon
+    {
+        $days = collect($days)->map(fn ($day) => (int) $day)->all();
+        $cursor = $startDate->copy()->startOfDay();
+        $matched = 0;
+
+        while ($matched < $targetCount) {
+            if (in_array($cursor->isoWeekday(), $days, true)) {
+                $matched++;
+            }
+
+            if ($matched < $targetCount) {
+                $cursor->addDay();
+            }
+        }
+
+        return $cursor;
     }
 
     /**

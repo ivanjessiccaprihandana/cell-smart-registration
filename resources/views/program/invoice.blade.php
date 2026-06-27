@@ -20,7 +20,7 @@
 @php
     $amount = $program->priceForClassType($auth->class_type);
     $amountText = $amount !== null ? 'Rp ' . number_format($amount, 0, ',', '.') : 'Menunggu konfirmasi admin';
-    $classType = $auth->class_type ?: '-';
+    $classType = trim(($auth->class_type ?: '-') . ($auth->private_package ? ' - ' . $auth->private_package : ''));
     $periodText = $latestEnrollment
         ? $latestEnrollment->start_date?->format('d M Y') . ' - ' . $latestEnrollment->end_date?->format('d M Y')
         : '-';

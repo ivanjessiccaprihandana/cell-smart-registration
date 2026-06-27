@@ -13,6 +13,7 @@ class ScheduleTemplate extends Model
         'tutor_id',
         'class_room_id',
         'class_type',
+        'private_package',
         'level',
         'batch_name',
         'registration_start_date',

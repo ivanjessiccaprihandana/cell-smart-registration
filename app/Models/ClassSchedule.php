@@ -14,6 +14,7 @@ class ClassSchedule extends Model
         'class_room_id',
         'program_id',
         'class_type',
+        'private_package',
         'class_date',
         'session_name',
         'start_time',

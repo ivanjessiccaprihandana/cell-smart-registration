@@ -12,7 +12,6 @@ class ProgramSeeder extends Seeder
     public function run(): void
     {
         $english = $this->category('Bahasa Inggris', null, 10, 'Program Bahasa Inggris CELL English Course.');
-        $testPrep = $this->category('Test Preparation', null, 20, 'Persiapan TOEIC dan TOEFL.');
         $bimbel = $this->category('BIMBEL', null, 30, 'Bimbingan belajar sekolah.');
 
         $levels = [
@@ -21,24 +20,24 @@ class ProgramSeeder extends Seeder
                 'description' => 'Program Bahasa Inggris untuk anak usia 6-12 tahun.',
                 'quota' => 17,
                 'price' => 750000,
-                'private_price' => 1200000,
-                'conversation_price' => 950000,
+                'private_price' => null,
+                'conversation_price' => null,
             ],
             'English for Teens' => [
                 'sort' => 20,
                 'description' => 'Program Bahasa Inggris untuk remaja usia 13-18 tahun.',
                 'quota' => 17,
                 'price' => 850000,
-                'private_price' => 1350000,
-                'conversation_price' => 1100000,
+                'private_price' => null,
+                'conversation_price' => null,
             ],
             'English for Adult' => [
                 'sort' => 30,
                 'description' => 'Program Bahasa Inggris untuk dewasa dan profesional.',
                 'quota' => 17,
                 'price' => 950000,
-                'private_price' => 1500000,
-                'conversation_price' => 1250000,
+                'private_price' => 2499000,
+                'conversation_price' => null,
             ],
         ];
 
@@ -73,15 +72,15 @@ class ProgramSeeder extends Seeder
                 }
             });
 
+        Program::whereIn('name', ['English Conversation', 'TOEIC', 'TOEFL'])
+            ->update(['status' => 'inactive']);
+
         foreach ([
-            ['English Conversation', $english->id, 'Bahasa Inggris', 8, 1200000, 'Latihan percakapan agar siswa lebih percaya diri berbicara Bahasa Inggris.'],
-            ['TOEIC', $testPrep->id, 'Test Preparation', 24, 2499000, 'Persiapan dan simulasi TOEIC offline dengan latihan soal dan strategi pengerjaan.'],
-            ['TOEFL', $testPrep->id, 'Test Preparation', 24, 2499000, 'Persiapan dan simulasi TOEFL offline untuk kebutuhan akademik dan tes kemampuan Bahasa Inggris.'],
-            ['BIMBEL TK', $bimbel->id, 'BIMBEL', 8, 500000, 'Pendampingan belajar sekolah untuk jenjang TK.'],
-            ['BIMBEL SD', $bimbel->id, 'BIMBEL', 8, 600000, 'Pendampingan belajar sekolah untuk jenjang SD.'],
-            ['BIMBEL SMP', $bimbel->id, 'BIMBEL', 8, 700000, 'Pendampingan belajar sekolah untuk jenjang SMP.'],
-            ['BIMBEL SMA', $bimbel->id, 'BIMBEL', 8, 800000, 'Pendampingan belajar sekolah untuk jenjang SMA.'],
-        ] as [$name, $categoryId, $category, $quota, $price, $description]) {
+            ['BIMBEL TK', $bimbel->id, 'BIMBEL', 8, 500000, null, 'Pendampingan belajar sekolah untuk jenjang TK.'],
+            ['BIMBEL SD', $bimbel->id, 'BIMBEL', 8, 600000, null, 'Pendampingan belajar sekolah untuk jenjang SD.'],
+            ['BIMBEL SMP', $bimbel->id, 'BIMBEL', 8, 700000, null, 'Pendampingan belajar sekolah untuk jenjang SMP.'],
+            ['BIMBEL SMA', $bimbel->id, 'BIMBEL', 8, 800000, null, 'Pendampingan belajar sekolah untuk jenjang SMA.'],
+        ] as [$name, $categoryId, $category, $quota, $price, $privatePrice, $description]) {
             Program::updateOrCreate(
                 ['name' => $name],
                 [
@@ -90,7 +89,7 @@ class ProgramSeeder extends Seeder
                     'category' => $category,
                     'quota' => $quota,
                     'price' => $price,
-                    'private_price' => null,
+                    'private_price' => $privatePrice,
                     'conversation_price' => null,
                     'start_date' => now(),
                     'end_date' => now()->addMonths(6),

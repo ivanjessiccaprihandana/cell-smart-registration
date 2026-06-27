@@ -30,6 +30,19 @@
         @error('class_type')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
     </div>
 
+    <div id="privatePackageField">
+        <label for="private_package" class="mb-2 block text-sm font-bold text-slate-700">Paket Private</label>
+        <select id="private_package" name="private_package"
+            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100">
+            <option value="">Pilih paket private...</option>
+            @foreach(($privatePackages ?? []) as $value => $label)
+                <option value="{{ $value }}" @selected(old('private_package', $scheduleTemplate->private_package ?? '') === $value)>{{ $label }}</option>
+            @endforeach
+        </select>
+        <p class="mt-2 text-xs font-medium text-slate-500">Diisi hanya untuk English for Adult kelas Private.</p>
+        @error('private_package')<p class="mt-2 text-sm font-semibold text-rose-600">{{ $message }}</p>@enderror
+    </div>
+
     <div>
         <label for="level" class="mb-2 block text-sm font-bold text-slate-700">Level</label>
         <select id="level" name="level"
@@ -190,6 +203,8 @@
         const programSelect = document.getElementById('program_id');
         const classTypeField = document.getElementById('classTypeField');
         const classTypeSelect = document.getElementById('class_type');
+        const privatePackageField = document.getElementById('privatePackageField');
+        const privatePackageSelect = document.getElementById('private_package');
         const classRoomSelect = document.getElementById('class_room_id');
         const maxStudentsInput = document.getElementById('max_students');
         const capacityHint = document.getElementById('capacityHint');
@@ -207,11 +222,23 @@
                 classTypeSelect.value = 'Reguler';
             }
 
+            syncPrivatePackage();
             syncCapacity();
             filterRooms();
         };
 
         const selectedClassType = () => classTypeField.classList.contains('hidden') ? '' : classTypeSelect.value;
+
+        const syncPrivatePackage = () => {
+            const isPrivate = selectedClassType() === 'Private';
+
+            privatePackageField.classList.toggle('hidden', !isPrivate);
+            privatePackageSelect.disabled = !isPrivate;
+
+            if (!isPrivate) {
+                privatePackageSelect.value = '';
+            }
+        };
 
         const syncCapacity = () => {
             const isPrivate = selectedClassType() === 'Private';
@@ -253,7 +280,10 @@
         };
 
         programSelect.addEventListener('change', syncClassType);
-        classTypeSelect.addEventListener('change', syncCapacity);
+        classTypeSelect.addEventListener('change', () => {
+            syncPrivatePackage();
+            syncCapacity();
+        });
         classRoomSelect.addEventListener('change', syncCapacity);
         syncClassType();
     });

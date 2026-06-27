@@ -18,6 +18,7 @@
     };
 
     $priceText = $program ? $program->formattedPriceForClassType($auth->class_type) : '-';
+    $classTypeText = trim(($auth->class_type ?: '') . ($auth->private_package ? ' - ' . $auth->private_package : ''));
     $requiresPlacementTest = $requiresPlacementTest ?? true;
     $canTakePlacement = $paymentStatus === 'diterima' && $requiresPlacementTest;
     $paymentDeadline = $paymentStatus === 'belum_upload' && $auth->registration_expires_at
@@ -64,10 +65,10 @@
                         <p class="text-sm font-semibold text-slate-500">Program</p>
                         <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $program->name ?? 'Belum memilih program' }}</p>
                     </div>
-                    @if($auth->class_type)
+                    @if($classTypeText)
                         <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
                             <p class="text-sm font-semibold text-slate-500">Jenis Kelas</p>
-                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $auth->class_type }}</p>
+                            <p class="text-sm font-bold text-slate-950 sm:text-right">{{ $classTypeText }}</p>
                         </div>
                     @endif
                     <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">

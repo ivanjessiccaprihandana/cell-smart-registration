@@ -29,7 +29,7 @@ class HomeClassSeeder extends Seeder
                 'heading_suffix' => ' & Teens',
                 'quota_program_name' => 'English for Kids',
                 'quota_label' => null,
-                'features' => ['English for Kids', 'English for Teens', 'English for Adult', 'Opsi Reguler atau Private'],
+                'features' => ['English for Kids', 'English for Teens', 'English for Adult', 'Private Adult: Conversation, TOEFL, TOEIC'],
                 'modal_title' => 'Pilih Program Bahasa Inggris',
                 'modal_description' => 'Pilih kelas sesuai usia dan kebutuhan siswa agar proses belajar lebih tepat, nyaman, dan mudah diikuti.',
                 'modal_breadcrumbs' => ['Kelas', 'Bahasa Inggris', 'Kids & Teens'],
@@ -61,7 +61,7 @@ class HomeClassSeeder extends Seeder
                         'description' => 'Penguasaan Bahasa Inggris untuk komunikasi kerja, studi, dan kebutuhan profesional.',
                         'badge' => 'Ages 18+',
                         'icon' => 'business_center',
-                        'features' => ['Daily conversation', 'Professional English', 'Grammar for adults'],
+                        'features' => ['Reguler Adult', 'Private Conversation', 'Private TOEFL/TOEIC'],
                     ],
                 ],
             ],
@@ -81,7 +81,7 @@ class HomeClassSeeder extends Seeder
                 'grid_columns' => 'lg:grid-cols-3',
                 'sort_order' => 20,
                 'is_featured' => true,
-                'is_active' => true,
+                'is_active' => false,
                 'sub_programs' => [
                     [
                         'title' => 'English Conversation',

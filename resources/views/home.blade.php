@@ -23,6 +23,16 @@
     .program-card.is-active .program-check { color: #fff; }
     .program-card.is-active .program-button { background: #fff; border-color: #fff; color: #4338ca; }
     .program-card.is-active .program-button:hover { background: #eef2ff; }
+    .cell-class-card { transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease; }
+    .cell-class-card:hover { border-color: #2563eb; box-shadow: 0 22px 45px rgba(37,99,235,0.14); transform: translateY(-3px); }
+    .cell-class-card.is-active { background: #2563eb; border-color: #2563eb; color: #fff; box-shadow: 0 26px 50px rgba(37,99,235,0.24); }
+    .cell-class-card.is-active .cell-card-muted,
+    .cell-class-card.is-active .cell-card-heading-suffix { color: #dbeafe; }
+    .cell-class-card.is-active .cell-card-title,
+    .cell-class-card.is-active .cell-card-heading { color: #fff; }
+    .cell-class-card.is-active .cell-card-check { color: #fff; }
+    .cell-class-card.is-active .cell-card-badge { background: rgba(255,255,255,0.14); color: #fff; }
+    .cell-class-card.is-active .cell-card-icon { background: rgba(255,255,255,0.16); color: #fff; }
     .sub-program-card { transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease, box-shadow 220ms ease, transform 220ms ease; }
     .sub-program-card:not(.is-active) { background: #fff; border-color: #e2e8f0; color: #0f172a; transform: translateY(0); }
     .sub-program-card:not(.is-active) .sub-program-title { color: #0f172a; }
@@ -220,76 +230,140 @@
         </div>
     </section>
 
-    <!-- Tutors -->
-    <section id="tutors" class="section-reveal py-16 bg-slate-50">
-        <div class="max-w-7xl mx-auto px-6 md:px-8">
-            <div class="max-w-2xl mb-10">
-                <h2 class="text-3xl font-bold text-slate-900">Profile Lembaga</h2>
-                <p class="text-slate-600">CELL FUN N EASY ENGLISH dikelola untuk menghadirkan pengalaman belajar yang nyaman, komunikatif, dan sesuai kebutuhan siswa.</p>
-            </div>
+    <!-- Institution Profile -->
+    <section id="tutors" class="section-reveal bg-white py-16">
+        <div class="mx-auto max-w-7xl px-6 md:px-8">
+            <div class="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
+                <article class="overflow-hidden rounded-3xl border border-blue-100 bg-blue-700 text-white shadow-xl shadow-blue-700/15">
+                    <div class="p-8 md:p-10">
+                        <span class="inline-flex rounded-full bg-white/15 px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-blue-50">
+                            Profil Lembaga
+                        </span>
+                        <h2 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">CELL English Course</h2>
+                        <p class="mt-4 max-w-2xl text-base leading-8 text-blue-50">
+                            Lembaga kursus yang berfokus pada pembelajaran Bahasa Inggris dan bimbingan belajar sekolah dengan suasana belajar yang nyaman, komunikatif, dan mudah diikuti siswa.
+                        </p>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                    <div class="h-14 w-14 flex items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 mb-5">
-                        <span class="material-symbols-outlined">psychology</span>
+                        <div class="mt-8 grid gap-4 sm:grid-cols-2">
+                            <div class="rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
+                                <p class="text-xs font-bold uppercase tracking-wide text-blue-100">Nama LKP</p>
+                                <p class="mt-2 text-lg font-extrabold">CELL English Course</p>
+                            </div>
+                            <div class="rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
+                                <p class="text-xs font-bold uppercase tracking-wide text-blue-100">Pimpinan</p>
+                                <p class="mt-2 text-lg font-extrabold">Edy Supriyanto, SS., M.Pd</p>
+                            </div>
+                        </div>
                     </div>
-                    <h3 class="text-lg font-bold mb-2">Nama LKP</h3>
-                    <p class="text-sm text-slate-600">CELL English Course</p>
-                </div>
 
-                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                    <div class="h-14 w-14 flex items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 mb-5">
-                        <span class="material-symbols-outlined">verified</span>
+                    <div class="border-t border-white/15 bg-white/10 px-8 py-5 md:px-10">
+                        <div class="flex flex-wrap gap-3 text-sm font-bold text-blue-50">
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2"><span class="material-symbols-outlined text-[18px]">translate</span>English Course</span>
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2"><span class="material-symbols-outlined text-[18px]">menu_book</span>BIMBEL TK-SMA</span>
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2"><span class="material-symbols-outlined text-[18px]">groups</span>Reguler & Private</span>
+                        </div>
                     </div>
-                    <h3 class="text-lg font-bold mb-2">Nama Pimpinan</h3>
-                    <p class="text-sm text-slate-600">Edy Supriyanto, SS., M.Pd</p>
-                </div>
+                </article>
 
-                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                    <div class="h-14 w-14 flex items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 mb-5">
-                        <span class="material-symbols-outlined">support_agent</span>
-                    </div>
-                    <h3 class="text-lg font-bold mb-2">Program</h3>
-                    <p class="text-sm text-slate-600">Bahasa Inggris dan BIMBEL untuk jenjang TK sampai SMA.</p>
+                <div class="grid gap-5">
+                    <article class="rounded-3xl border border-blue-100 bg-blue-50 p-6">
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-700 shadow-sm">
+                                <span class="material-symbols-outlined">flag</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-extrabold text-slate-950">Fokus Pembelajaran</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">Membantu siswa belajar Bahasa Inggris secara bertahap, aktif, dan sesuai usia atau kebutuhan belajarnya.</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+                                <span class="material-symbols-outlined">verified</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-extrabold text-slate-950">Layanan Program</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">Tersedia kelas Bahasa Inggris untuk Kids, Teens, Adult, pilihan private Adult, serta BIMBEL untuk jenjang TK sampai SMA.</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+                                <span class="material-symbols-outlined">support_agent</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-extrabold text-slate-950">Pendampingan Siswa</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">Admin membantu proses pendaftaran, verifikasi pembayaran, placement test untuk kelas English, dan informasi jadwal belajar.</p>
+                            </div>
+                        </div>
+                    </article>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Learning Focus -->
-    <section id="pricing" class="section-reveal py-16">
+    <section id="pricing" class="section-reveal bg-blue-50/50 py-16">
         <div class="max-w-7xl mx-auto px-6 md:px-8">
-            <div class="text-center max-w-2xl mx-auto mb-10">
-                <h2 class="text-3xl font-bold text-slate-900">Kelas CELL</h2>
-                <p class="text-slate-600">Dari kelas anak, pilihan privat, latihan percakapan, persiapan TOEIC/TOEFL, sampai BIMBEL sekolah dalam satu tempat belajar yang nyaman.</p>
+            <div class="mx-auto mb-10 max-w-3xl text-center">
+                <span class="inline-flex rounded-full bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-blue-700 shadow-sm ring-1 ring-blue-100">
+                    Program CELL
+                </span>
+                <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-slate-950 md:text-4xl">Kelas CELL</h2>
+                <p class="mt-3 text-base leading-7 text-slate-600">Pilih kelas Bahasa Inggris atau BIMBEL dengan jadwal yang sudah disiapkan CELL agar proses belajar lebih jelas dan terarah.</p>
             </div>
 
             @php
                 $homeClassCards = $homeClassCards ?? collect();
             @endphp
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
                 <?php foreach ($homeClassCards as $homeClass): ?>
                     @php
                         $modalId = $homeClass->modalId();
                         $quotaLabel = $homeClass->quota_label ?: ($homeClass->quota_program_name ? $quotaText($homeClass->quota_program_name) : null);
                     @endphp
-                    <div class="program-card {{ $homeClass->is_featured ? 'is-active border-indigo-600 bg-indigo-600 text-white shadow-lg' : 'border-slate-200 bg-white shadow-sm' }} cursor-pointer rounded-2xl border p-8" role="button" tabindex="0" aria-pressed="{{ $homeClass->is_featured ? 'true' : 'false' }}" data-modal-target="{{ $modalId }}">
-                        @if($homeClass->badge)
-                            <div class="mb-4 inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">{{ $homeClass->badge }}</div>
-                        @endif
-                        <h3 class="program-title mb-2 text-xl font-bold text-slate-900">{{ $homeClass->title }}</h3>
-                        <p class="program-muted mb-6 text-sm text-slate-600">{{ $homeClass->description }}</p>
-                        <div class="program-heading mb-6 text-3xl font-bold text-slate-900">{{ $homeClass->heading }}<span class="program-muted text-sm font-medium text-slate-500">{{ $homeClass->heading_suffix }}</span></div>
-                        @if($quotaLabel)
-                            <p class="program-muted mb-5 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">{{ $quotaLabel }}</p>
-                        @endif
-                        <ul class="program-muted mb-8 space-y-3 text-sm text-slate-600">
+                    <div class="cell-class-card {{ $homeClass->is_featured ? 'is-active' : 'border-blue-100 bg-white text-slate-950 shadow-sm' }} flex min-h-[28rem] cursor-pointer flex-col rounded-2xl border p-7" role="button" tabindex="0" aria-pressed="{{ $homeClass->is_featured ? 'true' : 'false' }}" data-modal-target="{{ $modalId }}">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                @if($homeClass->badge)
+                                    <div class="cell-card-badge mb-4 inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-700">{{ $homeClass->badge }}</div>
+                                @endif
+                                <h3 class="cell-card-title text-xl font-extrabold text-slate-950">{{ $homeClass->title }}</h3>
+                                <p class="cell-card-muted mt-3 text-sm leading-6 text-slate-600">{{ $homeClass->description }}</p>
+                            </div>
+                            <div class="cell-card-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                                <span class="material-symbols-outlined text-[30px]">{{ str_contains(strtolower($homeClass->title), 'bimbel') ? 'menu_book' : 'school' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-9">
+                            <div class="cell-card-heading text-4xl font-extrabold tracking-tight text-slate-950">
+                                {{ $homeClass->heading }}
+                                <span class="cell-card-heading-suffix text-base font-bold text-slate-500">{{ $homeClass->heading_suffix }}</span>
+                            </div>
+                            @if($quotaLabel)
+                                <p class="cell-card-badge mt-5 inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-700">{{ $quotaLabel }}</p>
+                            @endif
+                        </div>
+
+                        <ul class="cell-card-muted mt-8 flex-1 space-y-4 text-sm font-semibold text-slate-600">
                             @foreach(($homeClass->features ?? []) as $feature)
-                                <li class="flex gap-2"><span class="program-check material-symbols-outlined text-indigo-600">check_circle</span>{{ $feature }}</li>
+                                <li class="flex gap-3">
+                                    <span class="cell-card-check material-symbols-outlined text-[22px] text-blue-600">check_circle</span>
+                                    <span>{{ $feature }}</span>
+                                </li>
                             @endforeach
                         </ul>
-                        <a href="#{{ $modalId }}" class="program-button inline-flex w-full items-center justify-center rounded-lg border border-indigo-600 px-5 py-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Pilih Program</a>
+
+                        <a href="#{{ $modalId }}" class="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700">
+                            Pilih Program
+                            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                        </a>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -579,7 +653,7 @@
             });
         });
 
-        const programCards = document.querySelectorAll('.program-card');
+        const programCards = document.querySelectorAll('.program-card, .cell-class-card');
         const programModals = document.querySelectorAll('.program-modal');
 
         function openProgramModal(modalId) {
