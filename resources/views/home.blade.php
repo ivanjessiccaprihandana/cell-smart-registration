@@ -3,9 +3,19 @@
 @section('content')
 <style>
     html { scroll-behavior: smooth; }
+    main { display: flex; flex-direction: column; }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
     .glass-card { background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(229,231,235,0.5); }
     section[id] { scroll-margin-top: 5rem; }
+    #home { order: 1; }
+    #stats { order: 2; }
+    #programs { order: 3; }
+    #pricing { order: 4; }
+    #learning-gallery { order: 5; }
+    #tutors { order: 6; }
+    #testimonials { order: 7; }
+    #contact { order: 8; }
+    main > footer { order: 9; }
     .section-reveal { opacity: 0; transform: translateY(24px); transition: opacity 700ms ease, transform 700ms ease; }
     .section-reveal.is-visible { opacity: 1; transform: none; }
     .program-card { transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease, box-shadow 220ms ease, transform 220ms ease; }
@@ -48,6 +58,9 @@
     .sub-program-card.is-active .sub-program-button { background: #fff; border-color: #fff; color: #4338ca; }
     .sub-program-card.is-active .sub-program-visual { background: #4338ca; }
     .sub-program-card.is-active .sub-program-icon { color: rgba(255,255,255,0.82); }
+    .learning-photo-card { transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease; }
+    .learning-photo-card:hover,
+    .learning-photo-card.is-active { border-color: #2563eb; box-shadow: 0 20px 40px rgba(37,99,235,0.16); transform: translateY(-3px); }
     .modal-panel { animation: modal-pop 180ms ease-out; }
     @keyframes modal-pop {
         from { opacity: 0; transform: translateY(12px) scale(0.98); }
@@ -231,77 +244,166 @@
     </section>
 
     <!-- Institution Profile -->
-    <section id="tutors" class="section-reveal bg-white py-16">
-        <div class="mx-auto max-w-7xl px-6 md:px-8">
-            <div class="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
-                <article class="overflow-hidden rounded-3xl border border-blue-100 bg-blue-700 text-white shadow-xl shadow-blue-700/15">
-                    <div class="p-8 md:p-10">
-                        <span class="inline-flex rounded-full bg-white/15 px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-blue-50">
-                            Profil Lembaga
-                        </span>
-                        <h2 class="mt-5 text-3xl font-extrabold tracking-tight md:text-4xl">CELL English Course</h2>
-                        <p class="mt-4 max-w-2xl text-base leading-8 text-blue-50">
-                            Lembaga kursus yang berfokus pada pembelajaran Bahasa Inggris dan bimbingan belajar sekolah dengan suasana belajar yang nyaman, komunikatif, dan mudah diikuti siswa.
-                        </p>
-
-                        <div class="mt-8 grid gap-4 sm:grid-cols-2">
-                            <div class="rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
-                                <p class="text-xs font-bold uppercase tracking-wide text-blue-100">Nama LKP</p>
-                                <p class="mt-2 text-lg font-extrabold">CELL English Course</p>
-                            </div>
-                            <div class="rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
-                                <p class="text-xs font-bold uppercase tracking-wide text-blue-100">Pimpinan</p>
-                                <p class="mt-2 text-lg font-extrabold">Edy Supriyanto, SS., M.Pd</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-t border-white/15 bg-white/10 px-8 py-5 md:px-10">
-                        <div class="flex flex-wrap gap-3 text-sm font-bold text-blue-50">
-                            <span class="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2"><span class="material-symbols-outlined text-[18px]">translate</span>English Course</span>
-                            <span class="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2"><span class="material-symbols-outlined text-[18px]">menu_book</span>BIMBEL TK-SMA</span>
-                            <span class="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2"><span class="material-symbols-outlined text-[18px]">groups</span>Reguler & Private</span>
-                        </div>
-                    </div>
-                </article>
-
-                <div class="grid gap-5">
-                    <article class="rounded-3xl border border-blue-100 bg-blue-50 p-6">
-                        <div class="flex items-start gap-4">
-                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-700 shadow-sm">
-                                <span class="material-symbols-outlined">flag</span>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-extrabold text-slate-950">Fokus Pembelajaran</h3>
-                                <p class="mt-2 text-sm leading-6 text-slate-600">Membantu siswa belajar Bahasa Inggris secara bertahap, aktif, dan sesuai usia atau kebutuhan belajarnya.</p>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article class="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
-                        <div class="flex items-start gap-4">
-                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-                                <span class="material-symbols-outlined">verified</span>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-extrabold text-slate-950">Layanan Program</h3>
-                                <p class="mt-2 text-sm leading-6 text-slate-600">Tersedia kelas Bahasa Inggris untuk Kids, Teens, Adult, pilihan private Adult, serta BIMBEL untuk jenjang TK sampai SMA.</p>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article class="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
-                        <div class="flex items-start gap-4">
-                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-                                <span class="material-symbols-outlined">support_agent</span>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-extrabold text-slate-950">Pendampingan Siswa</h3>
-                                <p class="mt-2 text-sm leading-6 text-slate-600">Admin membantu proses pendaftaran, verifikasi pembayaran, placement test untuk kelas English, dan informasi jadwal belajar.</p>
-                            </div>
-                        </div>
-                    </article>
+    <section id="tutors" class="section-reveal bg-blue-700 py-16 text-white">
+        <div class="mx-auto max-w-6xl px-6 md:px-8">
+            <div class="grid gap-10 lg:grid-cols-[0.64fr_0.36fr] lg:items-start">
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-blue-100">Profil Lembaga</p>
+                    <h2 class="mt-4 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight md:text-5xl">CELL English Course</h2>
+                    <p class="mt-5 max-w-2xl text-base leading-8 text-blue-50">
+                        Lembaga kursus Bahasa Inggris dan bimbingan belajar sekolah untuk anak, remaja, dan dewasa.
+                    </p>
+                    <p class="mt-3 max-w-2xl text-base leading-8 text-blue-50">
+                        Program belajar disusun melalui pilihan kelas reguler, private Adult, test preparation, BIMBEL, serta jadwal yang lebih terarah.
+                    </p>
                 </div>
+
+                <div class="space-y-6 border-t border-white/20 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-1">
+                    <div>
+                        <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-blue-100">Pimpinan</p>
+                        <p class="mt-2 text-lg font-extrabold leading-7">Edy Supriyanto, SS., M.Pd</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-extrabold uppercase tracking-[0.16em] text-blue-100">Bidang Layanan</p>
+                        <p class="mt-2 text-lg font-extrabold leading-7">English Course dan BIMBEL</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-10 border-y border-white/20">
+                <div class="grid divide-y divide-white/20 md:grid-cols-4 md:divide-x md:divide-y-0">
+                    <div class="min-h-[8.5rem] py-6 md:pr-7">
+                        <p class="text-xl font-extrabold">English Course</p>
+                        <p class="mt-3 text-sm leading-6 text-blue-100">Kids, Teens, Adult, Conversation, TOEIC, dan TOEFL.</p>
+                    </div>
+                    <div class="min-h-[8.5rem] py-6 md:px-7">
+                        <p class="text-xl font-extrabold">BIMBEL Sekolah</p>
+                        <p class="mt-3 text-sm leading-6 text-blue-100">Pendampingan belajar TK, SD, SMP, dan SMA.</p>
+                    </div>
+                    <div class="min-h-[8.5rem] py-6 md:px-7">
+                        <p class="text-xl font-extrabold">6 Ruang</p>
+                        <p class="mt-3 text-sm leading-6 text-blue-100">3 ruang English dan 3 ruang BIMBEL.</p>
+                    </div>
+                    <div class="min-h-[8.5rem] py-6 md:pl-7">
+                        <p class="text-xl font-extrabold">25 Pertemuan</p>
+                        <p class="mt-3 text-sm leading-6 text-blue-100">Paket pertemuan untuk private Adult.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Learning Gallery -->
+    <section id="learning-gallery" class="section-reveal bg-blue-50/40 py-16">
+        <div class="mx-auto max-w-7xl px-6 md:px-8">
+            <div class="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div class="max-w-3xl">
+                    <span class="inline-flex rounded-full bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-blue-700 shadow-sm ring-1 ring-blue-100">
+                        Suasana Belajar
+                    </span>
+                    <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-slate-950 md:text-4xl">Layanan Belajar di CELL</h2>
+                    <p class="mt-3 text-base leading-7 text-slate-600">
+                        Gambaran pilihan kelas yang tersedia agar calon siswa lebih mudah memahami layanan sebelum mendaftar.
+                    </p>
+                </div>
+                <a href="{{ route('programs.index') }}" class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-white px-5 py-3 text-sm font-extrabold text-blue-700 shadow-sm hover:border-blue-600 hover:bg-blue-50">
+                    Lihat Program
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </a>
+            </div>
+
+            <div class="grid gap-5 lg:grid-cols-[1fr_0.62fr]">
+                <div class="grid gap-5 md:grid-cols-2">
+                    <button type="button" class="learning-photo-card is-active group overflow-hidden rounded-2xl border border-blue-200 bg-white text-left shadow-sm" data-learning-card="english">
+                        <div class="relative h-64 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=900&q=80" alt="Suasana kelas English for Kids dan Teens" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 p-6 text-white">
+                                <p class="text-xs font-extrabold uppercase tracking-wide text-blue-100">English Course</p>
+                                <h3 class="mt-2 text-2xl font-extrabold">Kids & Teens</h3>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button type="button" class="learning-photo-card group overflow-hidden rounded-2xl border border-blue-100 bg-white text-left shadow-sm" data-learning-card="adult">
+                        <div class="relative h-64 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=900&q=80" alt="Suasana kelas private adult" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 p-6 text-white">
+                                <p class="text-xs font-extrabold uppercase tracking-wide text-blue-100">Private Adult</p>
+                                <h3 class="mt-2 text-2xl font-extrabold">Conversation</h3>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button type="button" class="learning-photo-card group overflow-hidden rounded-2xl border border-blue-100 bg-white text-left shadow-sm" data-learning-card="test">
+                        <div class="relative h-64 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=900&q=80" alt="Suasana persiapan TOEIC dan TOEFL" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 p-6 text-white">
+                                <p class="text-xs font-extrabold uppercase tracking-wide text-blue-100">Test Preparation</p>
+                                <h3 class="mt-2 text-2xl font-extrabold">TOEIC & TOEFL</h3>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button type="button" class="learning-photo-card group overflow-hidden rounded-2xl border border-blue-100 bg-white text-left shadow-sm" data-learning-card="bimbel">
+                        <div class="relative h-64 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?auto=format&fit=crop&w=900&q=80" alt="Suasana bimbingan belajar sekolah" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 p-6 text-white">
+                                <p class="text-xs font-extrabold uppercase tracking-wide text-blue-100">BIMBEL Sekolah</p>
+                                <h3 class="mt-2 text-2xl font-extrabold">TK sampai SMA</h3>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+
+                <aside class="rounded-2xl border border-blue-100 bg-white p-7 shadow-sm">
+                    <div class="learning-detail" data-learning-detail="english">
+                        <span class="material-symbols-outlined text-4xl text-blue-700">translate</span>
+                        <h3 class="mt-5 text-2xl font-extrabold text-slate-950">English for Kids & Teens</h3>
+                        <p class="mt-3 text-sm leading-7 text-slate-600">Kelas Bahasa Inggris untuk anak dan remaja dengan materi bertahap, latihan speaking, vocabulary, dan grammar sesuai kebutuhan siswa.</p>
+                        <ul class="mt-6 space-y-3 text-sm font-semibold text-slate-700">
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Belajar sesuai usia siswa</li>
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Placement test untuk penyesuaian level</li>
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Jadwal tetap dari CELL</li>
+                        </ul>
+                    </div>
+
+                    <div class="learning-detail hidden" data-learning-detail="adult">
+                        <span class="material-symbols-outlined text-4xl text-blue-700">person</span>
+                        <h3 class="mt-5 text-2xl font-extrabold text-slate-950">Private Adult</h3>
+                        <p class="mt-3 text-sm leading-7 text-slate-600">Kelas private untuk dewasa dengan 1 siswa dalam 1 kelas. Pilihan paketnya meliputi Conversation, TOEIC Preparation, dan TOEFL Preparation.</p>
+                        <ul class="mt-6 space-y-3 text-sm font-semibold text-slate-700">
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Paket 25 pertemuan</li>
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Fokus sesuai kebutuhan siswa</li>
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>1 siswa per kelas</li>
+                        </ul>
+                    </div>
+
+                    <div class="learning-detail hidden" data-learning-detail="test">
+                        <span class="material-symbols-outlined text-4xl text-blue-700">quiz</span>
+                        <h3 class="mt-5 text-2xl font-extrabold text-slate-950">TOEIC & TOEFL Preparation</h3>
+                        <p class="mt-3 text-sm leading-7 text-slate-600">Program persiapan tes untuk membantu siswa memahami pola soal, mengatur strategi pengerjaan, dan membangun kebiasaan latihan yang terarah.</p>
+                        <ul class="mt-6 space-y-3 text-sm font-semibold text-slate-700">
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Latihan listening dan reading</li>
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Materi berbasis kebutuhan tes</li>
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Termasuk paket private Adult</li>
+                        </ul>
+                    </div>
+
+                    <div class="learning-detail hidden" data-learning-detail="bimbel">
+                        <span class="material-symbols-outlined text-4xl text-blue-700">menu_book</span>
+                        <h3 class="mt-5 text-2xl font-extrabold text-slate-950">BIMBEL Sekolah</h3>
+                        <p class="mt-3 text-sm leading-7 text-slate-600">Pendampingan belajar untuk siswa TK sampai SMA agar lebih terbantu memahami pelajaran sekolah dan mengerjakan latihan secara terarah.</p>
+                        <ul class="mt-6 space-y-3 text-sm font-semibold text-slate-700">
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Jenjang TK, SD, SMP, dan SMA</li>
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Kelas reguler</li>
+                            <li class="flex gap-2"><span class="material-symbols-outlined text-blue-700">check_circle</span>Materi mengikuti kebutuhan sekolah</li>
+                        </ul>
+                    </div>
+                </aside>
             </div>
         </div>
     </section>
@@ -614,6 +716,44 @@
                 if (menu) {
                     menu.removeAttribute('open');
                 }
+            });
+        });
+
+        const profileTabs = document.querySelectorAll('.profile-tab');
+        const profilePanels = document.querySelectorAll('.profile-panel');
+
+        profileTabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                const selectedTab = tab.dataset.profileTab;
+
+                profileTabs.forEach(function (item) {
+                    const isActive = item.dataset.profileTab === selectedTab;
+                    item.classList.toggle('bg-white', isActive);
+                    item.classList.toggle('shadow-sm', isActive);
+                    item.classList.toggle('text-blue-700', isActive);
+                    item.classList.toggle('text-slate-600', !isActive);
+                });
+
+                profilePanels.forEach(function (panel) {
+                    panel.classList.toggle('hidden', panel.dataset.profilePanel !== selectedTab);
+                });
+            });
+        });
+
+        const learningCards = document.querySelectorAll('.learning-photo-card');
+        const learningDetails = document.querySelectorAll('.learning-detail');
+
+        learningCards.forEach(function (card) {
+            card.addEventListener('click', function () {
+                const selectedCard = card.dataset.learningCard;
+
+                learningCards.forEach(function (item) {
+                    item.classList.toggle('is-active', item.dataset.learningCard === selectedCard);
+                });
+
+                learningDetails.forEach(function (detail) {
+                    detail.classList.toggle('hidden', detail.dataset.learningDetail !== selectedCard);
+                });
             });
         });
 

@@ -295,6 +295,37 @@ class AdminController extends Controller
             $program->schedule_used_capacity = $activeScheduleTemplates->sum(fn (ScheduleTemplate $template) => $template->activeStudentCount());
             $program->schedule_remaining_capacity = max(0, $program->schedule_total_capacity - $program->schedule_used_capacity);
             $program->schedule_is_full = $activeScheduleTemplates->isNotEmpty() && $program->schedule_remaining_capacity <= 0;
+
+            $program->private_package_summaries = collect();
+
+            if (str($program->name)->lower()->toString() === 'english for adult') {
+                $program->private_package_summaries = collect(Program::privatePackages())
+                    ->map(function (string $label, string $package) use ($program, $activeScheduleTemplates) {
+                        $templates = $activeScheduleTemplates
+                            ->where('class_type', 'Private')
+                            ->where('private_package', $package);
+
+                        $registeredCount = User::query()
+                            ->where('program', (string) $program->id)
+                            ->where('class_type', 'Private')
+                            ->where('private_package', $package)
+                            ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima'])
+                            ->count();
+
+                        $scheduleCapacity = $templates->sum(fn (ScheduleTemplate $template) => (int) $template->max_students);
+                        $usedScheduleCapacity = $templates->sum(fn (ScheduleTemplate $template) => $template->activeStudentCount());
+
+                        return [
+                            'name' => $label,
+                            'registered_count' => $registeredCount,
+                            'schedule_count' => $templates->count(),
+                            'schedule_capacity' => $scheduleCapacity,
+                            'schedule_used_capacity' => $usedScheduleCapacity,
+                            'schedule_remaining_capacity' => max(0, $scheduleCapacity - $usedScheduleCapacity),
+                            'is_full' => $templates->isNotEmpty() && $scheduleCapacity - $usedScheduleCapacity <= 0,
+                        ];
+                    });
+            }
         });
 
         return view('admin.programs.index', [
@@ -371,11 +402,12 @@ class AdminController extends Controller
 
     public function storeTutor(Request $request)
     {
-        Tutor::create($this->validateTutor($request));
+        $tutor = Tutor::create($this->validateTutor($request));
+        $assignedCount = $this->assignTutorToOpenSchedules($tutor);
 
         return redirect()
             ->route('admin.tutors.index')
-            ->with('success', 'Tutor berhasil ditambahkan.');
+            ->with('success', 'Tutor berhasil ditambahkan.' . ($assignedCount > 0 ? " {$assignedCount} jadwal kosong ikut diperbarui." : ''));
     }
 
     public function editTutor(Tutor $tutor)
@@ -390,10 +422,11 @@ class AdminController extends Controller
     public function updateTutor(Request $request, Tutor $tutor)
     {
         $tutor->update($this->validateTutor($request));
+        $assignedCount = $this->assignTutorToOpenSchedules($tutor->fresh());
 
         return redirect()
             ->route('admin.tutors.index')
-            ->with('success', 'Tutor berhasil diperbarui.');
+            ->with('success', 'Tutor berhasil diperbarui.' . ($assignedCount > 0 ? " {$assignedCount} jadwal kosong ikut diperbarui." : ''));
     }
 
     public function destroyTutor(Tutor $tutor)
@@ -1262,6 +1295,43 @@ class AdminController extends Controller
         $validated['is_active'] = $request->boolean('is_active');
 
         return $validated;
+    }
+
+    private function assignTutorToOpenSchedules(Tutor $tutor): int
+    {
+        if (!$tutor->is_active || !$tutor->program_id) {
+            return 0;
+        }
+
+        $templateQuery = ScheduleTemplate::query()
+            ->where('program_id', $tutor->program_id)
+            ->where(function ($query) use ($tutor) {
+                $query->whereNull('tutor_id')->orWhere('tutor_id', $tutor->id);
+            });
+
+        if ($tutor->level) {
+            $templateQuery->where(function ($query) use ($tutor) {
+                $query->whereNull('level')->orWhere('level', $tutor->level);
+            });
+        }
+
+        $templateIds = $templateQuery->pluck('id');
+
+        if ($templateIds->isEmpty()) {
+            return 0;
+        }
+
+        ScheduleTemplate::query()
+            ->whereIn('id', $templateIds)
+            ->whereNull('tutor_id')
+            ->update(['tutor_id' => $tutor->id]);
+
+        $updatedSchedules = ClassSchedule::query()
+            ->whereIn('schedule_template_id', $templateIds)
+            ->whereNull('tutor_id')
+            ->update(['tutor_id' => $tutor->id]);
+
+        return $templateIds->count() + $updatedSchedules;
     }
 
     private function tutorFormData(): array

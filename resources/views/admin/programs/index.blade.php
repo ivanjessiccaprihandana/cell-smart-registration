@@ -65,6 +65,21 @@
                             <td class="px-6 py-4">
                                 <div class="font-bold text-slate-900">{{ $program->name }}</div>
                                 <div class="mt-1 max-w-sm truncate text-xs text-slate-500">{{ $program->description ?: 'Tidak ada deskripsi.' }}</div>
+                                @if(($program->private_package_summaries ?? collect())->isNotEmpty())
+                                    <div class="mt-3 max-w-sm rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
+                                        <p class="text-[11px] font-extrabold uppercase tracking-wide text-blue-700">Paket Private Adult</p>
+                                        <div class="mt-2 flex flex-wrap gap-1.5">
+                                            @foreach($program->private_package_summaries as $package)
+                                                <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-blue-700 ring-1 ring-blue-100">
+                                                    {{ $package['name'] }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                        <p class="mt-2 text-[11px] leading-5 text-slate-500">
+                                            Pilihan ini muncul saat siswa memilih English for Adult kelas Private.
+                                        </p>
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-6 py-4 font-medium text-slate-700">{{ $program->category ?: '-' }}</td>
                             <td class="px-6 py-4 text-slate-600">
@@ -131,6 +146,40 @@
                                             @endif
                                         </div>
                                     </div>
+
+                                    @if(($program->private_package_summaries ?? collect())->isNotEmpty())
+                                        <div class="rounded-lg border border-blue-100 bg-white px-3 py-2">
+                                            <div class="text-xs font-bold uppercase tracking-wide text-blue-700">Detail Paket Private</div>
+                                            <div class="mt-2 space-y-2">
+                                                @foreach($program->private_package_summaries as $package)
+                                                    <div class="rounded-lg bg-blue-50 px-3 py-2">
+                                                        <div class="flex items-start justify-between gap-3">
+                                                            <div>
+                                                                <p class="text-xs font-extrabold text-slate-900">{{ $package['name'] }}</p>
+                                                                <p class="mt-0.5 text-[11px] font-medium text-slate-500">
+                                                                    {{ $package['registered_count'] }} pendaftar
+                                                                </p>
+                                                            </div>
+                                                            @if($package['schedule_count'] <= 0)
+                                                                <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">Belum ada jadwal</span>
+                                                            @elseif($package['is_full'])
+                                                                <span class="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">Penuh</span>
+                                                            @else
+                                                                <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">Tersedia</span>
+                                                            @endif
+                                                        </div>
+                                                        <div class="mt-1 text-[11px] font-medium {{ $package['is_full'] ? 'text-rose-600' : 'text-slate-500' }}">
+                                                            @if($package['schedule_count'] > 0)
+                                                                Jadwal: {{ $package['schedule_used_capacity'] }} / {{ $package['schedule_capacity'] }} kursi
+                                                            @else
+                                                                Buat pilihan jadwal paket ini terlebih dahulu
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </td>
                             <td class="px-6 py-4">
