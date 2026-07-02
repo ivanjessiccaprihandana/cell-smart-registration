@@ -17,6 +17,9 @@
         ->join(' & ');
     $periodStart = $assignedSchedules->min('class_date');
     $periodEnd = $assignedSchedules->max('class_date');
+    $studentClassTypeText = trim(($auth->class_type ?: '') . ($auth->private_package ? ' - ' . $auth->private_package : ''));
+    $defaultScheduleDescription = 'Kelas berlangsung 2 kali seminggu selama periode belajar. Detail setiap pertemuan dapat dilihat pada daftar pertemuan mendatang.';
+    $scheduleDescription = $mainSchedule?->notes ?: $defaultScheduleDescription;
 @endphp
 
 <main class="min-h-[calc(100vh-4rem)] bg-slate-50 px-6 py-10 md:px-8">
@@ -100,8 +103,13 @@
                                 <div>
                                     <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">Program</p>
                                     <h4 class="mt-1 text-2xl font-extrabold text-slate-950">{{ $mainSchedule->program?->name ?? '-' }}</h4>
-                                    @if($mainSchedule->class_type)
-                                        <p class="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-indigo-700">{{ $mainSchedule->class_type }}</p>
+                                    @php
+                                        $mainClassType = $mainSchedule->class_type ?: $auth->class_type;
+                                        $mainPrivatePackage = $mainSchedule->private_package ?: $auth->private_package;
+                                        $mainClassTypeText = trim(($mainClassType ?: '') . ($mainPrivatePackage ? ' - ' . $mainPrivatePackage : ''));
+                                    @endphp
+                                    @if($mainClassTypeText)
+                                        <p class="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-indigo-700">{{ $mainClassTypeText }}</p>
                                     @endif
                                 </div>
                                 <div class="rounded-xl bg-white px-4 py-3 text-sm font-extrabold text-indigo-700">
@@ -129,7 +137,7 @@
                             </div>
 
                             <div class="mt-5 rounded-xl bg-white/70 px-4 py-3 text-sm font-semibold leading-6 text-slate-600">
-                                Kelas berlangsung 2 kali seminggu selama periode belajar. Detail setiap pertemuan dapat dilihat pada daftar pertemuan mendatang.
+                                {{ $scheduleDescription }}
                             </div>
                         </article>
 
@@ -144,7 +152,6 @@
                                         data-day="{{ $dayLabels[$schedule->class_date->isoWeekday()] ?? $schedule->class_date->format('D') }}"
                                         data-time="{{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }}"
                                         data-program="{{ $schedule->program?->name ?? '-' }}"
-                                        data-class-type="{{ $schedule->class_type ?: '-' }}"
                                         data-room="{{ $schedule->classRoom?->name ?? $schedule->room ?: 'Ruang belum diisi' }}"
                                         data-tutor="{{ $schedule->tutor?->name ?: 'Tutor belum ditentukan' }}"
                                         data-description="{{ $schedule->notes ?: 'Pertemuan belajar sesuai jadwal aktif siswa. Hadir sesuai tanggal, jam, ruang, dan tutor yang sudah ditentukan.' }}">
@@ -274,10 +281,6 @@
                     <p id="modalMeetingProgram" class="mt-1 font-extrabold text-slate-950">-</p>
                 </div>
                 <div class="rounded-xl border border-slate-100 p-4">
-                    <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Jenis Kelas</p>
-                    <p id="modalMeetingClassType" class="mt-1 font-extrabold text-slate-950">-</p>
-                </div>
-                <div class="rounded-xl border border-slate-100 p-4">
                     <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Ruang</p>
                     <p id="modalMeetingRoom" class="mt-1 font-extrabold text-slate-950">-</p>
                 </div>
@@ -317,7 +320,6 @@
             day: document.getElementById('modalMeetingDay'),
             time: document.getElementById('modalMeetingTime'),
             program: document.getElementById('modalMeetingProgram'),
-            classType: document.getElementById('modalMeetingClassType'),
             room: document.getElementById('modalMeetingRoom'),
             tutor: document.getElementById('modalMeetingTutor'),
             description: document.getElementById('modalMeetingDescription'),
@@ -329,7 +331,6 @@
             modalFields.day.textContent = button.dataset.day || '-';
             modalFields.time.textContent = button.dataset.time || '-';
             modalFields.program.textContent = button.dataset.program || '-';
-            modalFields.classType.textContent = button.dataset.classType || '-';
             modalFields.room.textContent = button.dataset.room || '-';
             modalFields.tutor.textContent = button.dataset.tutor || '-';
             modalFields.description.textContent = button.dataset.description || '-';

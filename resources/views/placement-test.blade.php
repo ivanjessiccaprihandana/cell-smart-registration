@@ -268,6 +268,11 @@
 
         nextButton.addEventListener('click', function () {
             if (currentQuestion === cards.length - 1) {
+                if (answeredIndexes().size === 0) {
+                    alert('Silakan jawab minimal satu soal sebelum mengirim placement test.');
+                    return;
+                }
+
                 form.submit();
                 return;
             }

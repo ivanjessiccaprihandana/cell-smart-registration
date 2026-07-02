@@ -77,14 +77,15 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($templates as $template)
-                        @php($days = collect($template->days ?? [])->map(fn ($day) => $dayLabels[$day] ?? $day)->join(' & '))
+                        @php
+                            $days = collect($template->days ?? [])->map(fn ($day) => $dayLabels[$day] ?? $day)->join(' & ');
+                            $classTypeLabel = $template->class_type ?: 'Reguler';
+                        @endphp
                         <tr class="hover:bg-slate-50">
                             <td class="px-6 py-4">
                                 <p class="font-bold text-slate-950">{{ $template->program?->name }}</p>
                                 <div class="mt-2 flex flex-wrap gap-2">
-                                    @if($template->class_type)
-                                        <span class="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{{ $template->class_type }}</span>
-                                    @endif
+                                    <span class="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{{ $classTypeLabel }}</span>
                                     @if($template->private_package)
                                         <span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{{ $template->private_package }}</span>
                                     @endif

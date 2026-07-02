@@ -29,6 +29,11 @@ class PlacementTestController extends Controller
             ->latest()
             ->first();
 
+        if ($latestAttempt && !$this->attemptHasAnsweredQuestion($latestAttempt)) {
+            $latestAttempt->delete();
+            $latestAttempt = null;
+        }
+
         if ($latestAttempt) {
             session()->forget('placement_test_started_at');
         }
@@ -84,6 +89,18 @@ class PlacementTestController extends Controller
 
         $startedAt = (int) session('placement_test_started_at', $validated['started_at'] ?? now()->timestamp);
         $submittedAnswers = $validated['answers'] ?? [];
+        $answeredQuestionIds = collect($submittedAnswers)
+            ->filter(fn ($answer) => $answer !== null && $answer !== '')
+            ->keys();
+
+        if ($answeredQuestionIds->isEmpty()) {
+            session()->forget('placement_test_started_at');
+
+            return redirect()
+                ->route('placement-test')
+                ->withErrors(['placement_test' => 'Placement test belum bisa dikirim karena belum ada soal yang dijawab. Silakan jawab minimal satu soal.']);
+        }
+
         $answerRows = [];
         $correctAnswers = 0;
 
@@ -141,6 +158,12 @@ class PlacementTestController extends Controller
             $scorePercentage >= 30 => ['level' => 'Elementary'],
             default => ['level' => 'Beginner'],
         };
+    }
+
+    private function attemptHasAnsweredQuestion(PlacementTestAttempt $attempt): bool
+    {
+        return collect($attempt->answers ?? [])
+            ->contains(fn ($answer) => array_key_exists('selected_option', $answer) && $answer['selected_option'] !== null);
     }
 
     private function ensurePaymentCompleted(): ?\Illuminate\Http\RedirectResponse

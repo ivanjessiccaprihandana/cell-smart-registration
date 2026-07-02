@@ -288,6 +288,33 @@ class CellRegistrationFlowTest extends TestCase
         ]);
     }
 
+    public function test_placement_test_without_answers_is_not_saved_as_level(): void
+    {
+        $user = User::factory()->create(['payment_status' => 'diterima']);
+        $program = $this->createProgram('English for Kids', 'Bahasa Inggris');
+        $this->createScheduleTemplate($program, 'Reguler');
+
+        $user->update([
+            'program' => (string) $program->id,
+            'class_type' => 'Reguler',
+        ]);
+
+        PlacementQuestion::query()->delete();
+        $this->createPlacementQuestion(0);
+
+        $this->actingAs($user)
+            ->post(route('placement-test.store'), [
+                'started_at' => now()->subMinutes(5)->timestamp,
+                'answers' => [],
+            ])
+            ->assertRedirect(route('placement-test'))
+            ->assertSessionHasErrors('placement_test');
+
+        $this->assertDatabaseMissing('placement_test_attempts', [
+            'user_id' => $user->id,
+        ]);
+    }
+
     public function test_adult_private_package_requires_placement_test(): void
     {
         $user = User::factory()->create(['payment_status' => 'diterima']);

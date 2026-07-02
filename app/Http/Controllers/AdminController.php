@@ -573,6 +573,64 @@ class AdminController extends Controller
         $selectedScheduleType = array_key_exists((string) $request->query('schedule_type'), $scheduleTypeOptions)
             ? (string) $request->query('schedule_type')
             : null;
+
+        $applyScheduleFilters = function ($query) use ($selectedProgram, $selectedScheduleType) {
+            $query->when($selectedProgram, fn ($query) => $query->where('program_id', $selectedProgram))
+                ->when($selectedScheduleType, function ($query) use ($selectedScheduleType) {
+                    if ($selectedScheduleType === 'reguler') {
+                        $query
+                            ->where(function ($query) {
+                                $query->whereNull('class_type')
+                                    ->orWhere('class_type', 'Reguler');
+                            })
+                            ->whereNull('private_package');
+
+                        return;
+                    }
+
+                    $privatePackage = match ($selectedScheduleType) {
+                        'private-conversation' => 'Conversation',
+                        'private-toefl' => 'TOEFL Preparation',
+                        'private-toeic' => 'TOEIC Preparation',
+                        default => null,
+                    };
+
+                    $query
+                        ->where('class_type', 'Private')
+                        ->where('private_package', $privatePackage);
+                });
+
+            return $query;
+        };
+
+        if (($selectedProgram || $selectedScheduleType)
+            && !$applyScheduleFilters(ClassSchedule::query())
+                ->whereBetween('class_date', [$weekStart->toDateString(), $weekStart->copy()->addDays(6)->toDateString()])
+                ->exists()
+        ) {
+            $nearestFutureDate = $applyScheduleFilters(ClassSchedule::query())
+                ->whereDate('class_date', '>=', $weekStart->toDateString())
+                ->orderBy('class_date')
+                ->value('class_date');
+            $nearestPastDate = $nearestFutureDate ? null : $applyScheduleFilters(ClassSchedule::query())
+                ->whereDate('class_date', '<', $weekStart->toDateString())
+                ->orderByDesc('class_date')
+                ->value('class_date');
+            $nearestDate = $nearestFutureDate ?: $nearestPastDate;
+
+            if ($nearestDate) {
+                $targetWeek = \Illuminate\Support\Carbon::parse($nearestDate)->startOfWeek();
+
+                if (!$targetWeek->isSameDay($weekStart)) {
+                    return redirect()->route('admin.schedules.index', array_filter([
+                        'week' => $targetWeek->toDateString(),
+                        'program' => $selectedProgram,
+                        'schedule_type' => $selectedScheduleType,
+                    ]));
+                }
+            }
+        }
+
         $dayNames = ['Mon' => 'Senin', 'Tue' => 'Selasa', 'Wed' => 'Rabu', 'Thu' => 'Kamis', 'Fri' => 'Jumat', 'Sat' => 'Sabtu', 'Sun' => 'Minggu'];
         $weekDays = collect(range(0, 6))->map(function (int $dayOffset) use ($weekStart, $dayNames) {
             $date = $weekStart->copy()->addDays($dayOffset);
@@ -588,30 +646,7 @@ class AdminController extends Controller
 
         $scheduleRows = ClassSchedule::with(['program', 'student', 'tutor', 'classRoom', 'scheduleTemplate'])
             ->whereBetween('class_date', [$weekStart->toDateString(), $weekStart->copy()->addDays(6)->toDateString()])
-            ->when($selectedProgram, fn ($query) => $query->where('program_id', $selectedProgram))
-            ->when($selectedScheduleType, function ($query) use ($selectedScheduleType) {
-                if ($selectedScheduleType === 'reguler') {
-                    $query
-                        ->where(function ($query) {
-                            $query->whereNull('class_type')
-                                ->orWhere('class_type', 'Reguler');
-                        })
-                        ->whereNull('private_package');
-
-                    return;
-                }
-
-                $privatePackage = match ($selectedScheduleType) {
-                    'private-conversation' => 'Conversation',
-                    'private-toefl' => 'TOEFL Preparation',
-                    'private-toeic' => 'TOEIC Preparation',
-                    default => null,
-                };
-
-                $query
-                    ->where('class_type', 'Private')
-                    ->where('private_package', $privatePackage);
-            })
+            ->tap($applyScheduleFilters)
             ->orderBy('class_date')
             ->orderBy('start_time')
             ->get();
@@ -817,10 +852,11 @@ class AdminController extends Controller
     public function updateScheduleTemplate(Request $request, ScheduleTemplate $scheduleTemplate)
     {
         $scheduleTemplate->update($this->validateScheduleTemplate($request, $scheduleTemplate));
+        $syncedSchedules = $this->syncClassSchedulesWithTemplate($scheduleTemplate->fresh());
 
         return redirect()
             ->route('admin.schedule-templates.index')
-            ->with('success', 'Pilihan jadwal berhasil diperbarui.');
+            ->with('success', 'Pilihan jadwal berhasil diperbarui.' . ($syncedSchedules > 0 ? " {$syncedSchedules} jadwal siswa ikut diperbarui." : ''));
     }
 
     public function destroyScheduleTemplate(ScheduleTemplate $scheduleTemplate)
@@ -1035,7 +1071,7 @@ class AdminController extends Controller
             ]);
         }
 
-        $validated['class_type'] = $usesClassType ? ($validated['class_type'] ?? 'Reguler') : null;
+        $validated['class_type'] = $usesClassType ? ($validated['class_type'] ?? 'Reguler') : 'Reguler';
 
         if ($usesClassType && !$program->allowsClassType($validated['class_type'])) {
             throw ValidationException::withMessages([
@@ -1171,6 +1207,25 @@ class AdminController extends Controller
         }
 
         return $dates->count();
+    }
+
+    private function syncClassSchedulesWithTemplate(ScheduleTemplate $template): int
+    {
+        return ClassSchedule::query()
+            ->where('schedule_template_id', $template->id)
+            ->update([
+                'tutor_id' => $template->tutor_id,
+                'class_room_id' => $template->class_room_id,
+                'program_id' => $template->program_id,
+                'class_type' => $template->class_type,
+                'private_package' => $template->private_package,
+                'session_name' => $template->batch_name ?: 'Jadwal Belajar',
+                'start_time' => $template->start_time->format('H:i'),
+                'end_time' => $template->end_time->format('H:i'),
+                'room' => $template->room,
+                'max_students' => $template->max_students,
+                'notes' => $template->notes,
+            ]);
     }
 
     private function assignChosenScheduleAfterPayment(User $user): void
