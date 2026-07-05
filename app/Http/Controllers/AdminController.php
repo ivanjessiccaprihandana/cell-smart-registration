@@ -342,12 +342,8 @@ class AdminController extends Controller
     private function currentRegistrantsQuery()
     {
         return User::query()
-            ->whereNotNull('program')
-            ->whereHas('programEnrollments', function ($query) {
-                $query
-                    ->current()
-                    ->whereColumn('program_enrollments.program_id', 'users.program');
-            });
+            ->withCurrentEnrollment()
+            ->notFinishedLearning();
     }
 
     private function isCurrentClassSchedule(ClassSchedule $schedule): bool
@@ -396,7 +392,7 @@ class AdminController extends Controller
             ? $student->programEnrollments
             : $student->programEnrollments()->get();
 
-        return $enrollments->contains(function (ProgramEnrollment $enrollment) use ($programId, $classType, $privatePackage) {
+        $matchesCurrentEnrollment = $enrollments->contains(function (ProgramEnrollment $enrollment) use ($programId, $classType, $privatePackage) {
             $isCurrent = in_array($enrollment->status, ['pending', 'active'], true)
                 && (!$enrollment->end_date || $enrollment->end_date->gte(now()->startOfDay()));
 
@@ -405,6 +401,39 @@ class AdminController extends Controller
                 && $this->normaliseScheduleValue($enrollment->class_type) === $this->normaliseScheduleValue($classType)
                 && $this->normaliseScheduleValue($enrollment->private_package) === $this->normaliseScheduleValue($privatePackage);
         });
+
+        if (!$matchesCurrentEnrollment) {
+            return false;
+        }
+
+        if ($student->payment_status !== 'diterima') {
+            return true;
+        }
+
+        $matchingSchedules = $student->classSchedules()
+            ->where('program_id', $programId)
+            ->where(function ($query) use ($classType) {
+                if ($this->normaliseScheduleValue($classType)) {
+                    $query->where('class_type', $classType);
+                } else {
+                    $query->whereNull('class_type');
+                }
+            })
+            ->where(function ($query) use ($privatePackage) {
+                if ($this->normaliseScheduleValue($privatePackage)) {
+                    $query->where('private_package', $privatePackage);
+                } else {
+                    $query->whereNull('private_package');
+                }
+            });
+
+        if (!(clone $matchingSchedules)->exists()) {
+            return true;
+        }
+
+        return (clone $matchingSchedules)
+            ->whereDate('class_date', '>=', now()->toDateString())
+            ->exists();
     }
 
     private function normaliseScheduleValue(?string $value): ?string
@@ -818,7 +847,18 @@ class AdminController extends Controller
     public function classRooms()
     {
         $rooms = ClassRoom::query()
-            ->withCount(['scheduleTemplates', 'classSchedules'])
+            ->withCount([
+                'scheduleTemplates',
+                'classSchedules' => function ($query) {
+                    $query
+                        ->whereDate('class_date', '>=', now()->toDateString())
+                        ->whereHas('student', function ($query) {
+                            $query
+                                ->withCurrentEnrollment()
+                                ->notFinishedLearning();
+                        });
+                },
+            ])
             ->orderBy('category')
             ->orderBy('name')
             ->paginate(12);

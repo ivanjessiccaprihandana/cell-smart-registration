@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -79,5 +80,65 @@ class User extends Authenticatable
     public function activePrograms()
     {
         return $this->programs()->wherePivot('status', 'active');
+    }
+
+    public function scopeWithCurrentEnrollment(Builder $query): Builder
+    {
+        return $query
+            ->whereNotNull('program')
+            ->whereHas('programEnrollments', function ($query) {
+                $query
+                    ->current()
+                    ->whereColumn('program_enrollments.program_id', 'users.program')
+                    ->where(function ($query) {
+                        $query->whereColumn('program_enrollments.class_type', 'users.class_type')
+                            ->orWhere(function ($query) {
+                                $query->whereNull('program_enrollments.class_type')
+                                    ->whereNull('users.class_type');
+                            });
+                    })
+                    ->where(function ($query) {
+                        $query->whereColumn('program_enrollments.private_package', 'users.private_package')
+                            ->orWhere(function ($query) {
+                                $query->whereNull('program_enrollments.private_package')
+                                    ->whereNull('users.private_package');
+                            });
+                    });
+            });
+    }
+
+    public function scopeNotFinishedLearning(Builder $query): Builder
+    {
+        return $query->where(function ($query) {
+            $query
+                ->where('payment_status', '!=', 'diterima')
+                ->orWhereDoesntHave('classSchedules', function ($query) {
+                    self::constrainScheduleToCurrentUser($query);
+                })
+                ->orWhereHas('classSchedules', function ($query) {
+                    self::constrainScheduleToCurrentUser($query);
+                    $query->whereDate('class_date', '>=', now()->toDateString());
+                });
+        });
+    }
+
+    private static function constrainScheduleToCurrentUser(Builder $query): void
+    {
+        $query
+            ->whereColumn('class_schedules.program_id', 'users.program')
+            ->where(function ($query) {
+                $query->whereColumn('class_schedules.class_type', 'users.class_type')
+                    ->orWhere(function ($query) {
+                        $query->whereNull('class_schedules.class_type')
+                            ->whereNull('users.class_type');
+                    });
+            })
+            ->where(function ($query) {
+                $query->whereColumn('class_schedules.private_package', 'users.private_package')
+                    ->orWhere(function ($query) {
+                        $query->whereNull('class_schedules.private_package')
+                            ->whereNull('users.private_package');
+                    });
+            });
     }
 }

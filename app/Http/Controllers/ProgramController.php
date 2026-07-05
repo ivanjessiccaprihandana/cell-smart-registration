@@ -72,15 +72,20 @@ class ProgramController extends Controller
             ->latest()
             ->first();
         $latestEnrollment = $this->latestEnrollmentForUser($user, $program);
-        $hasUpcomingSchedule = ClassSchedule::query()
-            ->where('user_id', $user->id)
+        $currentProgramSchedules = $program
+            ? $this->currentProgramSchedulesQuery($user, $program)
+            : ClassSchedule::query()->whereRaw('1 = 0');
+        $hasAssignedSchedules = (clone $currentProgramSchedules)->exists();
+        $hasUpcomingSchedule = (clone $currentProgramSchedules)
             ->whereDate('class_date', '>=', now()->toDateString())
             ->exists();
         $isProgramFinished = $program
             && $user->payment_status === 'diterima'
-            && $latestEnrollment?->end_date
-            && $latestEnrollment->end_date->lt(now()->startOfDay())
-            && !$hasUpcomingSchedule;
+            && !$hasUpcomingSchedule
+            && (
+                $hasAssignedSchedules
+                || ($latestEnrollment?->end_date && $latestEnrollment->end_date->lt(now()->startOfDay()))
+            );
 
         return view('student.status', [
             'auth' => $user,
@@ -101,11 +106,13 @@ class ProgramController extends Controller
             ->first();
 
         $requiresPlacementTest = $program ? $this->programRequiresPlacementTest($program) : true;
-        $allAssignedSchedules = ClassSchedule::with(['program', 'tutor', 'classRoom'])
-            ->where('user_id', $user->id)
-            ->orderBy('class_date')
-            ->orderBy('start_time')
-            ->get();
+        $allAssignedSchedules = $program
+            ? $this->currentProgramSchedulesQuery($user, $program)
+                ->with(['program', 'tutor', 'classRoom'])
+                ->orderBy('class_date')
+                ->orderBy('start_time')
+                ->get()
+            : collect();
         $upcomingAssignedSchedules = $allAssignedSchedules
             ->filter(fn (ClassSchedule $schedule) => $schedule->class_date->gte(now()->startOfDay()))
             ->values();
@@ -167,12 +174,16 @@ class ProgramController extends Controller
             ->whereIn('status', ['pending', 'rejected'])
             ->delete();
 
-        SchedulePreference::create([
-            'user_id' => $user->id,
-            'schedule_template_id' => $validated['schedule_template_id'],
-            'priority' => 1,
-            'status' => 'pending',
-        ]);
+        SchedulePreference::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'schedule_template_id' => $validated['schedule_template_id'],
+            ],
+            [
+                'priority' => 1,
+                'status' => 'pending',
+            ]
+        );
 
         return redirect()
             ->route('student.schedule')
@@ -470,12 +481,16 @@ public function store(Request $request)
         ->delete();
 
     if ($selectedScheduleTemplateId) {
-        SchedulePreference::create([
-            'user_id' => $user->id,
-            'schedule_template_id' => $selectedScheduleTemplateId,
-            'priority' => 1,
-            'status' => 'pending',
-        ]);
+        SchedulePreference::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'schedule_template_id' => $selectedScheduleTemplateId,
+            ],
+            [
+                'priority' => 1,
+                'status' => 'pending',
+            ]
+        );
     }
 
     return redirect()
@@ -705,19 +720,42 @@ public function store(Request $request)
     {
         $latestEnrollment = $this->latestEnrollmentForUser($user, $program);
 
-        if (
-            ($user->payment_status ?: 'belum_upload') !== 'diterima'
-            || !$latestEnrollment?->end_date
-            || $latestEnrollment->end_date->greaterThanOrEqualTo(now()->startOfDay())
-        ) {
+        if (($user->payment_status ?: 'belum_upload') !== 'diterima') {
             return false;
         }
 
-        return !ClassSchedule::query()
-            ->where('user_id', $user->id)
-            ->where('program_id', $program->id)
+        $currentProgramSchedules = $this->currentProgramSchedulesQuery($user, $program);
+        $hasAssignedSchedules = (clone $currentProgramSchedules)->exists();
+        $hasUpcomingSchedule = (clone $currentProgramSchedules)
             ->whereDate('class_date', '>=', now()->toDateString())
             ->exists();
+
+        return !$hasUpcomingSchedule
+            && (
+                $hasAssignedSchedules
+                || ($latestEnrollment?->end_date && $latestEnrollment->end_date->lt(now()->startOfDay()))
+            );
+    }
+
+    private function currentProgramSchedulesQuery(User $user, Program $program)
+    {
+        return ClassSchedule::query()
+            ->where('user_id', $user->id)
+            ->where('program_id', $program->id)
+            ->where(function ($query) use ($user) {
+                if ($user->class_type) {
+                    $query->where('class_type', $user->class_type);
+                } else {
+                    $query->whereNull('class_type');
+                }
+            })
+            ->where(function ($query) use ($user) {
+                if ($user->private_package) {
+                    $query->where('private_package', $user->private_package);
+                } else {
+                    $query->whereNull('private_package');
+                }
+            });
     }
 
     private function expireUnpaidRegistration(User $user): bool

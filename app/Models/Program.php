@@ -65,7 +65,10 @@ class Program extends Model
         $query = ProgramEnrollment::query()
             ->current()
             ->whereHas('user', function ($query) {
-                $query->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
+                $query
+                    ->withCurrentEnrollment()
+                    ->notFinishedLearning()
+                    ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
             })
             ->where(function ($query) use ($variant, $baseProgram) {
                 $query->where('program_id', $this->id);

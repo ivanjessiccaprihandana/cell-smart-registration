@@ -80,6 +80,42 @@ class CellRegistrationFlowTest extends TestCase
         ]);
     }
 
+    public function test_user_can_resubmit_same_schedule_without_duplicate_preference_error(): void
+    {
+        $user = User::factory()->create();
+        $program = $this->createProgram('English for Kids', 'Bahasa Inggris');
+        $template = $this->createScheduleTemplate($program, 'Reguler');
+
+        SchedulePreference::create([
+            'user_id' => $user->id,
+            'schedule_template_id' => $template->id,
+            'priority' => 1,
+            'status' => 'assigned',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('programs.store'), [
+                'whatsapp' => '081292538501',
+                'address' => 'Jl. CELL English',
+                'program' => $program->id,
+                'class_type' => 'Reguler',
+                'schedule_template_id' => $template->id,
+            ])
+            ->assertRedirect(route('programs.payment'));
+
+        $this->assertSame(1, SchedulePreference::query()
+            ->where('user_id', $user->id)
+            ->where('schedule_template_id', $template->id)
+            ->count());
+
+        $this->assertDatabaseHas('schedule_preferences', [
+            'user_id' => $user->id,
+            'schedule_template_id' => $template->id,
+            'priority' => 1,
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_user_can_change_program_before_uploading_payment_proof(): void
     {
         $user = User::factory()->create();
@@ -510,6 +546,80 @@ class CellRegistrationFlowTest extends TestCase
             ->get(route('admin.payments.index'))
             ->assertOk()
             ->assertDontSee('Siswa Selesai');
+    }
+
+    public function test_student_with_all_meetings_in_the_past_is_not_counted_as_active_even_if_enrollment_end_date_is_future(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $student = User::factory()->create([
+            'name' => 'Siswa Semua Pertemuan Selesai',
+            'payment_status' => 'diterima',
+        ]);
+        $program = $this->createProgram('English for Teens', 'Bahasa Inggris');
+        $template = $this->createScheduleTemplate($program, 'Reguler', 'English Room 2');
+
+        $student->update([
+            'program' => (string) $program->id,
+            'class_type' => 'Reguler',
+        ]);
+
+        ProgramEnrollment::create([
+            'user_id' => $student->id,
+            'program_id' => $program->id,
+            'class_type' => 'Reguler',
+            'type' => 'new',
+            'enrolled_at' => now()->subMonth(),
+            'start_date' => now()->subMonth()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        SchedulePreference::create([
+            'user_id' => $student->id,
+            'schedule_template_id' => $template->id,
+            'priority' => 1,
+            'status' => 'assigned',
+        ]);
+
+        ClassSchedule::create([
+            'user_id' => $student->id,
+            'program_id' => $program->id,
+            'schedule_template_id' => $template->id,
+            'class_room_id' => $template->class_room_id,
+            'tutor_id' => $template->tutor_id,
+            'class_type' => 'Reguler',
+            'class_date' => now()->subDay()->toDateString(),
+            'session_name' => 'Pertemuan Terakhir',
+            'start_time' => '15:00',
+            'end_time' => '16:00',
+            'room' => 'English Room 2',
+            'max_students' => 8,
+        ]);
+
+        $this->assertSame(0, $program->fresh()->registeredUsersCount());
+        $this->assertSame(0, $template->fresh()->activeStudentCount());
+
+        $this->actingAs($student)
+            ->get(route('student.status'))
+            ->assertOk()
+            ->assertSee('Program Selesai');
+
+        $this->actingAs($admin)
+            ->get(route('admin.registrants.index'))
+            ->assertOk()
+            ->assertDontSee('Siswa Semua Pertemuan Selesai');
+
+        $this->actingAs($admin)
+            ->get(route('admin.schedules.index', ['week' => now()->subDay()->startOfWeek()->toDateString()]))
+            ->assertOk()
+            ->assertDontSee('Siswa Semua Pertemuan Selesai')
+            ->assertDontSee('Pertemuan Terakhir');
+
+        $this->actingAs($admin)
+            ->get(route('admin.class-rooms.show', $template->classRoom))
+            ->assertOk()
+            ->assertDontSee('Siswa Semua Pertemuan Selesai')
+            ->assertDontSee('Pertemuan Terakhir');
     }
 
     public function test_adult_private_toefl_package_payment_creates_twenty_five_meetings(): void

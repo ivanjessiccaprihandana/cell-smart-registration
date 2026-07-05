@@ -72,6 +72,8 @@ class ScheduleTemplate extends Model
             ->whereIn('status', ['pending', 'assigned'])
             ->whereHas('user', function ($query) {
                 $query
+                    ->withCurrentEnrollment()
+                    ->notFinishedLearning()
                     ->where('program', (string) $this->program_id)
                     ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima'])
                     ->whereHas('programEnrollments', function ($query) {
@@ -121,6 +123,8 @@ class ScheduleTemplate extends Model
             ->where('user_id', '!=', $userId)
             ->whereHas('user', function ($query) {
                 $query
+                    ->withCurrentEnrollment()
+                    ->notFinishedLearning()
                     ->where('program', (string) $this->program_id)
                     ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima'])
                     ->whereHas('programEnrollments', function ($query) {
