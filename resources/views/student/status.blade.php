@@ -2,8 +2,12 @@
 
 @section('content')
 @php
-    $paymentStatus = $auth->payment_status ?: 'belum_upload';
+    $hasSelectedProgram = (bool) $program;
+    $paymentStatus = $hasSelectedProgram ? ($auth->payment_status ?: 'belum_upload') : 'belum_memilih_program';
+    $isProgramFinished = $isProgramFinished ?? false;
+    $latestEnrollment = $latestEnrollment ?? null;
     $paymentLabel = [
+        'belum_memilih_program' => 'Belum Memilih Program',
         'belum_upload' => 'Belum Upload',
         'menunggu_verifikasi' => 'Menunggu Verifikasi',
         'diterima' => 'Terverifikasi',
@@ -14,8 +18,14 @@
         'diterima' => ['bg-emerald-50 text-emerald-700 border-emerald-200', 'verified', 'Pendaftaran Anda sudah terverifikasi. Silakan menunggu informasi jadwal belajar dari admin.'],
         'ditolak' => ['bg-rose-50 text-rose-700 border-rose-200', 'report', 'Bukti pembayaran ditolak. Upload ulang bukti yang lebih jelas atau hubungi admin.'],
         'menunggu_verifikasi' => ['bg-amber-50 text-amber-700 border-amber-200', 'schedule', 'Bukti pembayaran sedang diperiksa oleh admin. Estimasi verifikasi maksimal 1x24 jam.'],
+        'belum_memilih_program' => ['bg-blue-50 text-blue-700 border-blue-200', 'school', 'Silakan pilih program terlebih dahulu. Setelah program dipilih, status pembayaran dan placement test akan tampil sesuai alur pendaftaran.'],
         default => ['bg-slate-50 text-slate-700 border-slate-200', 'upload_file', 'Anda belum mengupload bukti pembayaran. Upload bukti untuk memulai verifikasi.'],
     };
+
+    if ($isProgramFinished) {
+        $paymentLabel = 'Program Selesai';
+        $paymentStyle = ['bg-blue-50 text-blue-700 border-blue-200', 'task_alt', 'Masa belajar program ini sudah selesai. Akun tetap aktif agar Anda dapat melihat riwayat jadwal dan invoice.'];
+    }
 
     $priceText = $program ? $program->formattedPriceForClassType($auth->class_type) : '-';
     $classTypeText = trim(($auth->class_type ?: '') . ($auth->private_package ? ' - ' . $auth->private_package : ''));
@@ -40,6 +50,51 @@
             </a>
         </section>
 
+        @if(!$hasSelectedProgram)
+            <section class="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-sm">
+                <div class="grid gap-6 p-6 md:grid-cols-[1fr_320px] md:p-8">
+                    <div>
+                        <span class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-extrabold text-blue-700">
+                            <span class="material-symbols-outlined text-[16px]">school</span>
+                            Belum memilih program
+                        </span>
+                        <h2 class="mt-5 text-2xl font-extrabold text-slate-950">Mulai pendaftaran dengan memilih program</h2>
+                        <p class="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
+                            Saat ini akun Anda sudah aktif, tetapi belum ada program yang dipilih. Pilih program terlebih dahulu agar sistem dapat menampilkan biaya, pembayaran, placement test, dan jadwal belajar yang sesuai.
+                        </p>
+
+                        <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Langkah 1</p>
+                                <p class="mt-2 text-sm font-extrabold text-slate-900">Pilih Program</p>
+                            </div>
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Langkah 2</p>
+                                <p class="mt-2 text-sm font-extrabold text-slate-900">Upload Pembayaran</p>
+                            </div>
+                            <div class="rounded-2xl bg-slate-50 p-4">
+                                <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Langkah 3</p>
+                                <p class="mt-2 text-sm font-extrabold text-slate-900">Jadwal Belajar</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-blue-700">
+                            <span class="material-symbols-outlined">fact_check</span>
+                        </div>
+                        <h3 class="mt-4 text-lg font-extrabold text-slate-950">Status belum tersedia</h3>
+                        <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                            Status pembayaran, placement test, dan jadwal akan aktif setelah Anda memilih salah satu program.
+                        </p>
+                        <a href="{{ route('home') }}#pricing" class="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
+                            <span class="material-symbols-outlined text-[18px]">school</span>
+                            Pilih Program
+                        </a>
+                    </div>
+                </div>
+            </section>
+        @else
         <section class="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
             <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -79,6 +134,14 @@
                         <p class="text-sm font-semibold text-slate-500">Total Biaya</p>
                         <p class="text-sm font-extrabold text-indigo-700 sm:text-right">{{ $priceText }}</p>
                     </div>
+                    @if($latestEnrollment?->start_date || $latestEnrollment?->end_date)
+                        <div class="grid gap-2 p-4 sm:grid-cols-[0.8fr_1.2fr]">
+                            <p class="text-sm font-semibold text-slate-500">Periode Belajar</p>
+                            <p class="text-sm font-bold text-slate-950 sm:text-right">
+                                {{ $latestEnrollment?->start_date?->format('d M Y') ?: '-' }} - {{ $latestEnrollment?->end_date?->format('d M Y') ?: '-' }}
+                            </p>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="mt-6 grid gap-3 sm:grid-cols-2">
@@ -86,6 +149,11 @@
                         <a href="{{ route('programs.index') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
                             <span class="material-symbols-outlined text-[18px]">school</span>
                             Pilih Program
+                        </a>
+                    @elseif($isProgramFinished)
+                        <a href="{{ route('student.schedule') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
+                            <span class="material-symbols-outlined text-[18px]">history</span>
+                            Lihat Riwayat Jadwal
                         </a>
                     @elseif(in_array($paymentStatus, ['belum_upload', 'ditolak'], true))
                         <a href="{{ route('programs.payment') }}" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700">
@@ -110,17 +178,15 @@
                             Ubah Program
                         </a>
                     @endif
+
+                    @if($isProgramFinished)
+                        <a href="{{ route('home') }}#pricing" class="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-5 text-sm font-bold text-indigo-700 hover:border-indigo-500 hover:bg-indigo-100 sm:col-span-2">
+                            <span class="material-symbols-outlined text-[18px]">school</span>
+                            Ambil Program Lagi
+                        </a>
+                    @endif
                 </div>
 
-                @if($program)
-                    <form method="POST" action="{{ route('programs.renew') }}" class="mt-3">
-                        @csrf
-                        <button type="submit" class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-5 text-sm font-bold text-indigo-700 hover:border-indigo-500 hover:bg-indigo-100">
-                            <span class="material-symbols-outlined text-[18px]">autorenew</span>
-                            Perpanjang Program
-                        </button>
-                    </form>
-                @endif
             </article>
 
             <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -202,6 +268,7 @@
                 </div>
             </article>
         </section>
+        @endif
     </div>
 </main>
 @endsection

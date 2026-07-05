@@ -197,6 +197,321 @@ class CellRegistrationFlowTest extends TestCase
         $this->assertGreaterThan(0, ClassSchedule::where('user_id', $student->id)->count());
     }
 
+    public function test_finished_program_keeps_schedule_history_visible_to_student(): void
+    {
+        $student = User::factory()->create([
+            'payment_status' => 'diterima',
+        ]);
+        $program = $this->createProgram('BIMBEL SD', 'BIMBEL');
+        $template = $this->createScheduleTemplate($program, 'Reguler', 'Bimbel Room 1');
+
+        $student->update([
+            'program' => (string) $program->id,
+            'class_type' => 'Reguler',
+        ]);
+
+        ProgramEnrollment::create([
+            'user_id' => $student->id,
+            'program_id' => $program->id,
+            'class_type' => 'Reguler',
+            'type' => 'new',
+            'enrolled_at' => now()->subMonth(),
+            'start_date' => now()->subMonth()->toDateString(),
+            'end_date' => now()->subDay()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        ClassSchedule::create([
+            'user_id' => $student->id,
+            'program_id' => $program->id,
+            'schedule_template_id' => $template->id,
+            'class_room_id' => $template->class_room_id,
+            'tutor_id' => $template->tutor_id,
+            'class_type' => 'Reguler',
+            'class_date' => now()->subWeek()->toDateString(),
+            'session_name' => 'Pertemuan 1',
+            'start_time' => '15:00',
+            'end_time' => '16:00',
+            'room' => 'Bimbel Room 1',
+            'max_students' => 8,
+            'notes' => 'Riwayat kelas selesai.',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.status'))
+            ->assertOk()
+            ->assertSee('Program Selesai')
+            ->assertSee('Lihat Riwayat Jadwal');
+
+        $this->actingAs($student)
+            ->get(route('student.schedule'))
+            ->assertOk()
+            ->assertSee('Program Selesai')
+            ->assertSee('Riwayat Pertemuan')
+            ->assertSee('BIMBEL SD');
+    }
+
+    public function test_student_can_take_another_program_after_previous_program_finished(): void
+    {
+        $student = User::factory()->create([
+            'payment_status' => 'diterima',
+        ]);
+        $oldProgram = $this->createProgram('English for Kids', 'Bahasa Inggris');
+        $newProgram = $this->createProgram('English for Teens', 'Bahasa Inggris');
+        $oldTemplate = $this->createScheduleTemplate($oldProgram, 'Reguler', 'English Room 1');
+        $newTemplate = $this->createScheduleTemplate($newProgram, 'Reguler', 'English Room 2');
+
+        $student->update([
+            'program' => (string) $oldProgram->id,
+            'class_type' => 'Reguler',
+        ]);
+
+        ProgramEnrollment::create([
+            'user_id' => $student->id,
+            'program_id' => $oldProgram->id,
+            'class_type' => 'Reguler',
+            'type' => 'new',
+            'enrolled_at' => now()->subMonth(),
+            'start_date' => now()->subMonth()->toDateString(),
+            'end_date' => now()->subDay()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        ClassSchedule::create([
+            'user_id' => $student->id,
+            'program_id' => $oldProgram->id,
+            'schedule_template_id' => $oldTemplate->id,
+            'class_room_id' => $oldTemplate->class_room_id,
+            'tutor_id' => $oldTemplate->tutor_id,
+            'class_type' => 'Reguler',
+            'class_date' => now()->subWeek()->toDateString(),
+            'session_name' => 'Pertemuan 1',
+            'start_time' => '15:00',
+            'end_time' => '16:00',
+            'room' => 'English Room 1',
+            'max_students' => 8,
+            'notes' => 'Riwayat kelas selesai.',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('programs.change'))
+            ->assertOk()
+            ->assertSee('Pilih Program');
+
+        $this->actingAs($student)
+            ->post(route('programs.store'), [
+                'whatsapp' => '081292538501',
+                'address' => 'Jl. CELL English',
+                'program' => $newProgram->id,
+                'class_type' => 'Reguler',
+                'schedule_template_id' => $newTemplate->id,
+            ])
+            ->assertRedirect(route('programs.payment'));
+
+        $student->refresh();
+
+        $this->assertSame((string) $newProgram->id, $student->program);
+        $this->assertSame('belum_upload', $student->payment_status);
+        $this->assertDatabaseHas('program_enrollments', [
+            'user_id' => $student->id,
+            'program_id' => $newProgram->id,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_old_assigned_schedule_does_not_reserve_seat_after_student_changes_program(): void
+    {
+        $student = User::factory()->create([
+            'payment_status' => 'diterima',
+        ]);
+        $teens = $this->createProgram('English for Teens', 'Bahasa Inggris');
+        $adult = $this->createProgram('English for Adult', 'Bahasa Inggris');
+        $teensTemplate = $this->createScheduleTemplate($teens, 'Reguler', 'English Room 2');
+
+        $student->update([
+            'program' => (string) $teens->id,
+            'class_type' => 'Reguler',
+        ]);
+
+        ProgramEnrollment::create([
+            'user_id' => $student->id,
+            'program_id' => $teens->id,
+            'class_type' => 'Reguler',
+            'type' => 'new',
+            'enrolled_at' => now(),
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        SchedulePreference::create([
+            'user_id' => $student->id,
+            'schedule_template_id' => $teensTemplate->id,
+            'priority' => 1,
+            'status' => 'assigned',
+        ]);
+
+        $this->assertSame(1, $teensTemplate->fresh()->activeStudentCount());
+
+        $student->update([
+            'program' => (string) $adult->id,
+            'class_type' => 'Reguler',
+            'private_package' => null,
+        ]);
+
+        $this->assertSame(0, $teensTemplate->fresh()->activeStudentCount());
+    }
+
+    public function test_admin_active_schedule_views_hide_old_program_after_student_takes_new_program(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $student = User::factory()->create([
+            'name' => 'Siswa Pindah Program',
+            'payment_status' => 'diterima',
+        ]);
+        $teens = $this->createProgram('English for Teens', 'Bahasa Inggris');
+        $adult = $this->createProgram('English for Adult', 'Bahasa Inggris');
+        $teensTemplate = $this->createScheduleTemplate($teens, 'Reguler', 'English Room 2');
+        $adultTemplate = $this->createScheduleTemplate($adult, 'Private', 'English Room 2', 1);
+        $adultTemplate->update([
+            'private_package' => 'Conversation',
+        ]);
+
+        $student->update([
+            'program' => (string) $adult->id,
+            'class_type' => 'Private',
+            'private_package' => 'Conversation',
+        ]);
+
+        ProgramEnrollment::create([
+            'user_id' => $student->id,
+            'program_id' => $teens->id,
+            'class_type' => 'Reguler',
+            'type' => 'new',
+            'enrolled_at' => now()->subMonth(),
+            'start_date' => now()->subMonth()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        ProgramEnrollment::create([
+            'user_id' => $student->id,
+            'program_id' => $adult->id,
+            'class_type' => 'Private',
+            'private_package' => 'Conversation',
+            'type' => 'new',
+            'enrolled_at' => now(),
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        SchedulePreference::create([
+            'user_id' => $student->id,
+            'schedule_template_id' => $teensTemplate->id,
+            'priority' => 1,
+            'status' => 'assigned',
+        ]);
+
+        SchedulePreference::create([
+            'user_id' => $student->id,
+            'schedule_template_id' => $adultTemplate->id,
+            'priority' => 1,
+            'status' => 'assigned',
+        ]);
+
+        ClassSchedule::create([
+            'user_id' => $student->id,
+            'program_id' => $teens->id,
+            'schedule_template_id' => $teensTemplate->id,
+            'class_room_id' => $teensTemplate->class_room_id,
+            'tutor_id' => $teensTemplate->tutor_id,
+            'class_type' => 'Reguler',
+            'class_date' => '2026-07-08',
+            'session_name' => 'Pertemuan Lama',
+            'start_time' => '15:00',
+            'end_time' => '16:00',
+            'room' => 'English Room 2',
+            'max_students' => 8,
+        ]);
+
+        ClassSchedule::create([
+            'user_id' => $student->id,
+            'program_id' => $adult->id,
+            'schedule_template_id' => $adultTemplate->id,
+            'class_room_id' => $adultTemplate->class_room_id,
+            'tutor_id' => $adultTemplate->tutor_id,
+            'class_type' => 'Private',
+            'private_package' => 'Conversation',
+            'class_date' => '2026-07-09',
+            'session_name' => 'Pertemuan Baru',
+            'start_time' => '19:00',
+            'end_time' => '20:00',
+            'room' => 'English Room 2',
+            'max_students' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.schedules.index', ['week' => '2026-07-06']))
+            ->assertOk()
+            ->assertSee('English for Adult - Conversation')
+            ->assertDontSee('15:00 - 16:00');
+
+        $this->actingAs($admin)
+            ->get(route('admin.class-rooms.show', $adultTemplate->classRoom))
+            ->assertOk()
+            ->assertSee('English for Adult')
+            ->assertSee('Conversation')
+            ->assertDontSee('English for Teens');
+    }
+
+    public function test_finished_student_is_not_counted_as_active_admin_registrant_or_quota(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $student = User::factory()->create([
+            'name' => 'Siswa Selesai',
+            'payment_status' => 'diterima',
+        ]);
+        $program = $this->createProgram('English for Teens', 'Bahasa Inggris');
+        $template = $this->createScheduleTemplate($program, 'Reguler', 'English Room 2');
+
+        $student->update([
+            'program' => (string) $program->id,
+            'class_type' => 'Reguler',
+        ]);
+
+        ProgramEnrollment::create([
+            'user_id' => $student->id,
+            'program_id' => $program->id,
+            'class_type' => 'Reguler',
+            'type' => 'new',
+            'enrolled_at' => now()->subMonth(),
+            'start_date' => now()->subMonth()->toDateString(),
+            'end_date' => now()->subDay()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        SchedulePreference::create([
+            'user_id' => $student->id,
+            'schedule_template_id' => $template->id,
+            'priority' => 1,
+            'status' => 'assigned',
+        ]);
+
+        $this->assertSame(0, $program->fresh()->registeredUsersCount());
+        $this->assertSame(0, $template->fresh()->activeStudentCount());
+
+        $this->actingAs($admin)
+            ->get(route('admin.registrants.index'))
+            ->assertOk()
+            ->assertDontSee('Siswa Selesai');
+
+        $this->actingAs($admin)
+            ->get(route('admin.payments.index'))
+            ->assertOk()
+            ->assertDontSee('Siswa Selesai');
+    }
+
     public function test_adult_private_toefl_package_payment_creates_twenty_five_meetings(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
@@ -447,6 +762,32 @@ class CellRegistrationFlowTest extends TestCase
             ->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Dashboard');
+    }
+
+    public function test_admin_login_redirects_directly_to_admin_dashboard(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'admin-login@cell.local',
+            'is_admin' => true,
+        ]);
+
+        $this->post(route('login'), [
+            'email' => $admin->email,
+            'password' => 'password',
+        ])->assertRedirect(route('admin.dashboard'));
+    }
+
+    public function test_student_login_does_not_redirect_to_admin_dashboard(): void
+    {
+        $student = User::factory()->create([
+            'email' => 'student-login@cell.local',
+            'is_admin' => false,
+        ]);
+
+        $this->post(route('login'), [
+            'email' => $student->email,
+            'password' => 'password',
+        ])->assertRedirect(route('home'));
     }
 
     private function createProgram(string $name, string $category, ?ProgramCategory $programCategory = null): Program

@@ -71,7 +71,34 @@ class ScheduleTemplate extends Model
         return $this->preferences()
             ->whereIn('status', ['pending', 'assigned'])
             ->whereHas('user', function ($query) {
-                $query->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
+                $query
+                    ->where('program', (string) $this->program_id)
+                    ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima'])
+                    ->whereHas('programEnrollments', function ($query) {
+                        $query
+                            ->current()
+                            ->where('program_id', $this->program_id);
+
+                        if ($this->class_type) {
+                            $query->where('class_type', $this->class_type);
+                        }
+
+                        if ($this->private_package) {
+                            $query->where('private_package', $this->private_package);
+                        } else {
+                            $query->whereNull('private_package');
+                        }
+                    });
+
+                if ($this->class_type) {
+                    $query->where('class_type', $this->class_type);
+                }
+
+                if ($this->private_package) {
+                    $query->where('private_package', $this->private_package);
+                } else {
+                    $query->whereNull('private_package');
+                }
             })
             ->distinct('user_id')
             ->count('user_id');
@@ -93,7 +120,34 @@ class ScheduleTemplate extends Model
             ->whereIn('status', ['pending', 'assigned'])
             ->where('user_id', '!=', $userId)
             ->whereHas('user', function ($query) {
-                $query->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
+                $query
+                    ->where('program', (string) $this->program_id)
+                    ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima'])
+                    ->whereHas('programEnrollments', function ($query) {
+                        $query
+                            ->current()
+                            ->where('program_id', $this->program_id);
+
+                        if ($this->class_type) {
+                            $query->where('class_type', $this->class_type);
+                        }
+
+                        if ($this->private_package) {
+                            $query->where('private_package', $this->private_package);
+                        } else {
+                            $query->whereNull('private_package');
+                        }
+                    });
+
+                if ($this->class_type) {
+                    $query->where('class_type', $this->class_type);
+                }
+
+                if ($this->private_package) {
+                    $query->where('private_package', $this->private_package);
+                } else {
+                    $query->whereNull('private_package');
+                }
             })
             ->distinct('user_id')
             ->count('user_id');

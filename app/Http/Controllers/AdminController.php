@@ -34,8 +34,7 @@ class AdminController extends Controller
             ->mapWithKeys(fn ($name, $id) => [(string) $id => $name])
             ->all();
 
-        $registeredUsers = User::query()
-            ->whereNotNull('program')
+        $registeredUsers = $this->currentRegistrantsQuery()
             ->latest()
             ->get();
 
@@ -113,8 +112,7 @@ class AdminController extends Controller
         $selectedProgram = in_array((string) $selectedProgram, $validProgramIds, true) ? (string) $selectedProgram : null;
         $selectedClassType = in_array($selectedClassType, $validClassTypes, true) ? $selectedClassType : null;
 
-        $registrants = User::query()
-            ->whereNotNull('program')
+        $registrants = $this->currentRegistrantsQuery()
             ->when($selectedProgram, function ($query) use ($selectedProgram) {
                 $query->where('program', $selectedProgram);
             })
@@ -130,7 +128,7 @@ class AdminController extends Controller
 
         $programSummaries = $programs
             ->map(function (Program $program) use ($programLabels, $selectedClassType) {
-                $students = User::query()
+                $students = $this->currentRegistrantsQuery()
                     ->where('program', (string) $program->id)
                     ->when($selectedClassType, function ($query) use ($selectedClassType) {
                         $query->where('class_type', $selectedClassType);
@@ -310,6 +308,13 @@ class AdminController extends Controller
                             ->where('class_type', 'Private')
                             ->where('private_package', $package)
                             ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima'])
+                            ->whereHas('programEnrollments', function ($query) use ($program, $package) {
+                                $query
+                                    ->current()
+                                    ->where('program_id', $program->id)
+                                    ->where('class_type', 'Private')
+                                    ->where('private_package', $package);
+                            })
                             ->count();
 
                         $scheduleCapacity = $templates->sum(fn (ScheduleTemplate $template) => (int) $template->max_students);
@@ -332,6 +337,81 @@ class AdminController extends Controller
             'title' => 'Kelola Program',
             'programs' => $programs,
         ]);
+    }
+
+    private function currentRegistrantsQuery()
+    {
+        return User::query()
+            ->whereNotNull('program')
+            ->whereHas('programEnrollments', function ($query) {
+                $query
+                    ->current()
+                    ->whereColumn('program_enrollments.program_id', 'users.program');
+            });
+    }
+
+    private function isCurrentClassSchedule(ClassSchedule $schedule): bool
+    {
+        return $this->studentMatchesCurrentEnrollment(
+            $schedule->student,
+            $schedule->program_id,
+            $schedule->class_type,
+            $schedule->private_package
+        );
+    }
+
+    private function isCurrentSchedulePreference(SchedulePreference $preference, ScheduleTemplate $template): bool
+    {
+        return $this->studentMatchesCurrentEnrollment(
+            $preference->user,
+            $template->program_id,
+            $template->class_type,
+            $template->private_package
+        );
+    }
+
+    private function studentMatchesCurrentEnrollment(?User $student, int|string|null $programId, ?string $classType, ?string $privatePackage): bool
+    {
+        if (!$student || !$programId || !$student->program) {
+            return false;
+        }
+
+        if ((string) $student->program !== (string) $programId) {
+            return false;
+        }
+
+        if ($this->normaliseScheduleValue($student->class_type) !== $this->normaliseScheduleValue($classType)) {
+            return false;
+        }
+
+        if ($this->normaliseScheduleValue($student->private_package) !== $this->normaliseScheduleValue($privatePackage)) {
+            return false;
+        }
+
+        if (!in_array($student->payment_status ?: 'belum_upload', ['menunggu_verifikasi', 'diterima'], true)) {
+            return false;
+        }
+
+        $enrollments = $student->relationLoaded('programEnrollments')
+            ? $student->programEnrollments
+            : $student->programEnrollments()->get();
+
+        return $enrollments->contains(function (ProgramEnrollment $enrollment) use ($programId, $classType, $privatePackage) {
+            $isCurrent = in_array($enrollment->status, ['pending', 'active'], true)
+                && (!$enrollment->end_date || $enrollment->end_date->gte(now()->startOfDay()));
+
+            return $isCurrent
+                && (string) $enrollment->program_id === (string) $programId
+                && $this->normaliseScheduleValue($enrollment->class_type) === $this->normaliseScheduleValue($classType)
+                && $this->normaliseScheduleValue($enrollment->private_package) === $this->normaliseScheduleValue($privatePackage);
+        });
+    }
+
+    private function normaliseScheduleValue(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
     private function validateRegistrant(Request $request): array
@@ -453,8 +533,7 @@ class AdminController extends Controller
         $selectedStatus = $request->query('status');
         $validStatuses = array_keys($this->paymentStatuses());
 
-        $users = User::query()
-            ->whereNotNull('program')
+        $users = $this->currentRegistrantsQuery()
             ->when(in_array($selectedStatus, $validStatuses, true), function ($query) use ($selectedStatus) {
                 $query->where('payment_status', $selectedStatus);
             })
@@ -603,22 +682,24 @@ class AdminController extends Controller
             return $query;
         };
 
-        if (($selectedProgram || $selectedScheduleType)
-            && !$applyScheduleFilters(ClassSchedule::query())
-                ->whereBetween('class_date', [$weekStart->toDateString(), $weekStart->copy()->addDays(6)->toDateString()])
-                ->exists()
-        ) {
-            $nearestFutureDate = $applyScheduleFilters(ClassSchedule::query())
-                ->whereDate('class_date', '>=', $weekStart->toDateString())
+        if ($selectedProgram || $selectedScheduleType) {
+            $matchingDates = $applyScheduleFilters(ClassSchedule::with('student.programEnrollments'))
                 ->orderBy('class_date')
-                ->value('class_date');
-            $nearestPastDate = $nearestFutureDate ? null : $applyScheduleFilters(ClassSchedule::query())
-                ->whereDate('class_date', '<', $weekStart->toDateString())
-                ->orderByDesc('class_date')
-                ->value('class_date');
+                ->get()
+                ->filter(fn (ClassSchedule $schedule) => $this->isCurrentClassSchedule($schedule))
+                ->pluck('class_date');
+
+            $hasScheduleThisWeek = $matchingDates
+                ->contains(fn ($date) => $date?->betweenIncluded($weekStart, $weekStart->copy()->addDays(6)));
+
+            $nearestFutureDate = $matchingDates
+                ->first(fn ($date) => $date?->gte($weekStart));
+            $nearestPastDate = $nearestFutureDate ? null : $matchingDates
+                ->reverse()
+                ->first(fn ($date) => $date?->lt($weekStart));
             $nearestDate = $nearestFutureDate ?: $nearestPastDate;
 
-            if ($nearestDate) {
+            if (!$hasScheduleThisWeek && $nearestDate) {
                 $targetWeek = \Illuminate\Support\Carbon::parse($nearestDate)->startOfWeek();
 
                 if (!$targetWeek->isSameDay($weekStart)) {
@@ -644,12 +725,14 @@ class AdminController extends Controller
             ];
         });
 
-        $scheduleRows = ClassSchedule::with(['program', 'student', 'tutor', 'classRoom', 'scheduleTemplate'])
+        $scheduleRows = ClassSchedule::with(['program', 'student.programEnrollments', 'tutor', 'classRoom', 'scheduleTemplate'])
             ->whereBetween('class_date', [$weekStart->toDateString(), $weekStart->copy()->addDays(6)->toDateString()])
             ->tap($applyScheduleFilters)
             ->orderBy('class_date')
             ->orderBy('start_time')
-            ->get();
+            ->get()
+            ->filter(fn (ClassSchedule $schedule) => $this->isCurrentClassSchedule($schedule))
+            ->values();
 
         $schedules = $scheduleRows
             ->groupBy(function (ClassSchedule $schedule) {
@@ -761,18 +844,42 @@ class AdminController extends Controller
         $room->load([
             'scheduleTemplates' => function ($query) {
                 $query
-                    ->with(['program', 'tutor', 'preferences.user'])
+                    ->with(['program', 'tutor', 'preferences.user.programEnrollments'])
                     ->orderBy('program_id')
                     ->orderBy('start_time');
             },
             'classSchedules' => function ($query) {
                 $query
-                    ->with(['program', 'student', 'tutor'])
+                    ->with(['program', 'student.programEnrollments', 'tutor'])
                     ->whereDate('class_date', '>=', now()->toDateString())
                     ->orderBy('class_date')
                     ->orderBy('start_time');
             },
         ]);
+
+        $room->setRelation(
+            'classSchedules',
+            $room->classSchedules
+                ->filter(fn (ClassSchedule $schedule) => $this->isCurrentClassSchedule($schedule))
+                ->values()
+        );
+
+        $room->setRelation(
+            'scheduleTemplates',
+            $room->scheduleTemplates
+                ->map(function (ScheduleTemplate $template) {
+                    $template->setRelation(
+                        'preferences',
+                        $template->preferences
+                            ->filter(fn (SchedulePreference $preference) => $this->isCurrentSchedulePreference($preference, $template))
+                            ->values()
+                    );
+
+                    return $template;
+                })
+                ->filter(fn (ScheduleTemplate $template) => $template->preferences->isNotEmpty())
+                ->values()
+        );
 
         return view('admin.class-rooms.show', [
             'title' => 'Isi Ruang Kelas',
@@ -1256,9 +1363,8 @@ class AdminController extends Controller
     {
         return [
             'programs' => Program::where('status', 'active')->orderBy('name')->get(),
-            'students' => User::query()
+            'students' => $this->currentRegistrantsQuery()
                 ->with('latestPlacementAttempt')
-                ->whereNotNull('program')
                 ->orderBy('name')
                 ->get(),
             'tutors' => Tutor::query()

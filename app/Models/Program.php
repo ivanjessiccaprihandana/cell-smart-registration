@@ -59,26 +59,27 @@ class Program extends Model
 
     public function registeredUsersCount(): int
     {
-        $query = User::query()
-            ->where('program', (string) $this->id)
-            ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
-
         $variant = $this->classTypeVariant();
+        $baseProgram = $variant ? self::where('name', $variant['base_name'])->first() : null;
 
-        if ($variant) {
-            $baseProgram = self::where('name', $variant['base_name'])->first();
+        $query = ProgramEnrollment::query()
+            ->current()
+            ->whereHas('user', function ($query) {
+                $query->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
+            })
+            ->where(function ($query) use ($variant, $baseProgram) {
+                $query->where('program_id', $this->id);
 
-            if ($baseProgram) {
-                $query->orWhere(function ($query) use ($baseProgram, $variant) {
-                    $query
-                        ->where('program', (string) $baseProgram->id)
-                        ->where('class_type', $variant['class_type'])
-                        ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
-                });
-            }
-        }
+                if ($variant && $baseProgram) {
+                    $query->orWhere(function ($query) use ($baseProgram, $variant) {
+                        $query
+                            ->where('program_id', $baseProgram->id)
+                            ->where('class_type', $variant['class_type']);
+                    });
+                }
+            });
 
-        return $query->distinct('id')->count('id');
+        return $query->distinct('user_id')->count('user_id');
     }
 
     public function remainingQuota(): ?int

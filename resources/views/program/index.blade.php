@@ -7,10 +7,11 @@
     $selectedPrivatePackage = old('private_package', $auth->private_package ?? '');
     $paymentStatus = $auth->payment_status ?: 'belum_upload';
     $isChangingSelection = (bool) ($isChangingSelection ?? false);
+    $canStartNewProgramAfterCompletion = (bool) ($canStartNewProgramAfterCompletion ?? false);
     $canChangeProgramBeforePayment = filled($auth->program ?? null)
         && blank($auth->payment_proof_path ?? null)
         && $paymentStatus === 'belum_upload';
-    $isProgramLocked = filled($auth->program ?? null) && !$canChangeProgramBeforePayment;
+    $isProgramLocked = filled($auth->program ?? null) && !$canChangeProgramBeforePayment && !$canStartNewProgramAfterCompletion;
     $selectedProgramModel = $selectedProgramModel ?? $programs->firstWhere('id', $selectedProgram);
     $hasSelectedProgram = filled($selectedProgram) && $selectedProgramModel;
     $shouldLockProgram = $isProgramLocked && $selectedProgramModel;

@@ -71,12 +71,24 @@ class ProgramController extends Controller
         $latestPlacementAttempt = PlacementTestAttempt::where('user_id', $user->id)
             ->latest()
             ->first();
+        $latestEnrollment = $this->latestEnrollmentForUser($user, $program);
+        $hasUpcomingSchedule = ClassSchedule::query()
+            ->where('user_id', $user->id)
+            ->whereDate('class_date', '>=', now()->toDateString())
+            ->exists();
+        $isProgramFinished = $program
+            && $user->payment_status === 'diterima'
+            && $latestEnrollment?->end_date
+            && $latestEnrollment->end_date->lt(now()->startOfDay())
+            && !$hasUpcomingSchedule;
 
         return view('student.status', [
             'auth' => $user,
             'program' => $program,
             'latestPlacementAttempt' => $latestPlacementAttempt,
             'requiresPlacementTest' => $program ? $this->programRequiresPlacementTest($program) : true,
+            'latestEnrollment' => $latestEnrollment,
+            'isProgramFinished' => $isProgramFinished,
         ]);
     }
 
@@ -89,6 +101,17 @@ class ProgramController extends Controller
             ->first();
 
         $requiresPlacementTest = $program ? $this->programRequiresPlacementTest($program) : true;
+        $allAssignedSchedules = ClassSchedule::with(['program', 'tutor', 'classRoom'])
+            ->where('user_id', $user->id)
+            ->orderBy('class_date')
+            ->orderBy('start_time')
+            ->get();
+        $upcomingAssignedSchedules = $allAssignedSchedules
+            ->filter(fn (ClassSchedule $schedule) => $schedule->class_date->gte(now()->startOfDay()))
+            ->values();
+        $latestEnrollment = $this->latestEnrollmentForUser($user, $program);
+        $isProgramFinished = $allAssignedSchedules->isNotEmpty()
+            && $upcomingAssignedSchedules->isEmpty();
 
         if ($requiresPlacementTest && !$latestPlacementAttempt) {
             return redirect()
@@ -101,18 +124,16 @@ class ProgramController extends Controller
             'program' => $program,
             'latestPlacementAttempt' => $latestPlacementAttempt,
             'requiresPlacementTest' => $requiresPlacementTest,
+            'latestEnrollment' => $latestEnrollment,
+            'isProgramFinished' => $isProgramFinished,
+            'scheduleDisplayMode' => $isProgramFinished ? 'history' : 'upcoming',
             'scheduleTemplates' => $program ? $this->matchingScheduleTemplates($user, $program, $latestPlacementAttempt?->level) : collect(),
             'schedulePreferences' => SchedulePreference::with('scheduleTemplate.program', 'scheduleTemplate.tutor')
                 ->where('user_id', $user->id)
                 ->orderBy('priority')
                 ->get(),
             'dayLabels' => $this->dayLabels(),
-            'assignedSchedules' => ClassSchedule::with(['program', 'tutor', 'classRoom'])
-                ->where('user_id', $user->id)
-                ->whereDate('class_date', '>=', now()->toDateString())
-                ->orderBy('class_date')
-                ->orderBy('start_time')
-                ->get(),
+            'assignedSchedules' => $isProgramFinished ? $allAssignedSchedules : $upcomingAssignedSchedules,
         ]);
     }
 
@@ -232,6 +253,10 @@ class ProgramController extends Controller
         $selectedProgram = $selectedProgramId !== ''
             ? $programs->firstWhere('id', $selectedProgramId) ?? Program::find($selectedProgramId)
             : null;
+        $currentProgram = $auth?->program ? Program::find($auth->program) : null;
+        $canStartNewProgramAfterCompletion = $auth && $currentProgram
+            ? $this->hasFinishedCurrentProgram($auth, $currentProgram)
+            : false;
         $currentScheduleTemplateId = SchedulePreference::query()
             ->where('user_id', $auth->id)
             ->whereIn('status', ['pending', 'assigned'])
@@ -265,6 +290,7 @@ class ProgramController extends Controller
                 ->get(),
             'dayLabels' => $this->dayLabels(),
             'isChangingSelection' => request()->boolean('change'),
+            'canStartNewProgramAfterCompletion' => $canStartNewProgramAfterCompletion,
         ]);
     }
 
@@ -279,11 +305,15 @@ class ProgramController extends Controller
         }
 
         $paymentStatus = $auth->payment_status ?: 'belum_upload';
+        $currentProgram = $auth->program ? Program::find($auth->program) : null;
+        $canStartNewProgramAfterCompletion = $currentProgram
+            ? $this->hasFinishedCurrentProgram($auth, $currentProgram)
+            : false;
         $canChangeProgramBeforePayment = $auth->program
             && !$auth->payment_proof_path
             && $paymentStatus === 'belum_upload';
 
-        if ($auth->program && !$canChangeProgramBeforePayment) {
+        if ($auth->program && !$canChangeProgramBeforePayment && !$canStartNewProgramAfterCompletion) {
             return redirect()
                 ->route('programs.payment')
                 ->withErrors(['program' => 'Program tidak bisa diubah setelah bukti pembayaran diupload. Silakan hubungi admin jika perlu perubahan.']);
@@ -294,6 +324,7 @@ class ProgramController extends Controller
             'programs' => $this->activeSelectablePrograms(),
             'currentProgramId' => (string) ($auth->program ?? ''),
             'paymentDeadline' => $auth->registration_expires_at,
+            'canStartNewProgramAfterCompletion' => $canStartNewProgramAfterCompletion,
         ]);
     }
 
@@ -320,8 +351,12 @@ public function store(Request $request)
     $canChangeProgramBeforePayment = $user->program
         && !$user->payment_proof_path
         && ($user->payment_status ?: 'belum_upload') === 'belum_upload';
+    $currentProgramModel = $user->program ? Program::find($user->program) : null;
+    $canStartNewProgramAfterCompletion = $currentProgramModel
+        ? $this->hasFinishedCurrentProgram($user, $currentProgramModel)
+        : false;
 
-    if ($user->program && !$canChangeProgramBeforePayment) {
+    if ($user->program && !$canChangeProgramBeforePayment && !$canStartNewProgramAfterCompletion) {
         return redirect()
             ->route('programs.payment')
             ->withErrors(['program' => 'Program tidak bisa diubah setelah bukti pembayaran diupload. Silakan hubungi admin jika perlu perubahan.']);
@@ -652,6 +687,39 @@ public function store(Request $request)
         return $program;
     }
 
+    private function latestEnrollmentForUser(User $user, ?Program $program): ?ProgramEnrollment
+    {
+        if (!$program) {
+            return null;
+        }
+
+        return ProgramEnrollment::query()
+            ->where('user_id', $user->id)
+            ->where('program_id', $program->id)
+            ->latest('end_date')
+            ->latest()
+            ->first();
+    }
+
+    private function hasFinishedCurrentProgram(User $user, Program $program): bool
+    {
+        $latestEnrollment = $this->latestEnrollmentForUser($user, $program);
+
+        if (
+            ($user->payment_status ?: 'belum_upload') !== 'diterima'
+            || !$latestEnrollment?->end_date
+            || $latestEnrollment->end_date->greaterThanOrEqualTo(now()->startOfDay())
+        ) {
+            return false;
+        }
+
+        return !ClassSchedule::query()
+            ->where('user_id', $user->id)
+            ->where('program_id', $program->id)
+            ->whereDate('class_date', '>=', now()->toDateString())
+            ->exists();
+    }
+
     private function expireUnpaidRegistration(User $user): bool
     {
         $paymentStatus = $user->payment_status ?: 'belum_upload';
@@ -729,9 +797,12 @@ public function store(Request $request)
 
     private function classTypeCountsForProgram(Program $program): array
     {
-        $counts = User::query()
-            ->where('program', (string) $program->id)
-            ->whereIn('payment_status', ['menunggu_verifikasi', 'diterima'])
+        $counts = ProgramEnrollment::query()
+            ->current()
+            ->where('program_id', $program->id)
+            ->whereHas('user', function ($query) {
+                $query->whereIn('payment_status', ['menunggu_verifikasi', 'diterima']);
+            })
             ->selectRaw('COALESCE(class_type, ?) as class_type, COUNT(*) as total', ['Reguler'])
             ->groupBy('class_type')
             ->pluck('total', 'class_type');

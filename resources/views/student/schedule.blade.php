@@ -7,6 +7,8 @@
     $scheduleTemplates = $scheduleTemplates ?? collect();
     $schedulePreferences = $schedulePreferences ?? collect();
     $requiresPlacementTest = $requiresPlacementTest ?? true;
+    $isProgramFinished = $isProgramFinished ?? false;
+    $scheduleDisplayMode = $scheduleDisplayMode ?? 'upcoming';
     $dayLabels = $dayLabels ?? [];
     $adminWhatsappUrl = 'https://wa.me/6281292538501?text=' . rawurlencode('Halo admin CELL English Course, saya ingin konsultasi jadwal belajar.');
     $mainSchedule = $assignedSchedules->first();
@@ -57,7 +59,11 @@
                     <h2 class="mt-2 text-3xl font-extrabold">Informasi Jadwal Belajar</h2>
                     <p class="mt-2 text-sm font-semibold text-indigo-100">
                         @if($assignedSchedules->isNotEmpty())
-                            Jadwal belajar sudah ditentukan. Silakan ikuti pertemuan sesuai periode yang tertera.
+                            @if($isProgramFinished)
+                                Program sudah selesai. Jadwal ditampilkan sebagai riwayat belajar siswa.
+                            @else
+                                Jadwal belajar sudah ditentukan. Silakan ikuti pertemuan sesuai periode yang tertera.
+                            @endif
                         @elseif($requiresPlacementTest)
                             Placement test selesai, jadwal akan dipilih setelah konsultasi.
                         @else
@@ -84,7 +90,13 @@
                     </div>
                     <div class="rounded-2xl bg-indigo-50 p-5">
                         <p class="text-xs font-bold uppercase tracking-wide text-indigo-500">Status Jadwal</p>
-                        <p class="mt-2 text-xl font-extrabold text-indigo-700">{{ $assignedSchedules->isNotEmpty() ? 'Jadwal Ditentukan' : 'Menunggu Konsultasi' }}</p>
+                        <p class="mt-2 text-xl font-extrabold text-indigo-700">
+                            @if($isProgramFinished)
+                                Program Selesai
+                            @else
+                                {{ $assignedSchedules->isNotEmpty() ? 'Jadwal Ditentukan' : 'Menunggu Konsultasi' }}
+                            @endif
+                        </p>
                     </div>
                 </div>
 
@@ -93,9 +105,13 @@
                         <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                             <div>
                                 <h3 class="text-lg font-extrabold text-slate-950">Jadwal Belajar Anda</h3>
-                                <p class="mt-1 text-sm text-slate-500">Ringkasan jadwal utama selama periode belajar.</p>
+                                <p class="mt-1 text-sm text-slate-500">
+                                    {{ $isProgramFinished ? 'Riwayat jadwal belajar yang sudah selesai.' : 'Ringkasan jadwal utama selama periode belajar.' }}
+                                </p>
                             </div>
-                            <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Jadwal Aktif</span>
+                            <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold {{ $isProgramFinished ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700' }}">
+                                {{ $isProgramFinished ? 'Program Selesai' : 'Jadwal Aktif' }}
+                            </span>
                         </div>
 
                         <article class="mt-5 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
@@ -137,12 +153,14 @@
                             </div>
 
                             <div class="mt-5 rounded-xl bg-white/70 px-4 py-3 text-sm font-semibold leading-6 text-slate-600">
-                                {{ $scheduleDescription }}
+                                {{ $isProgramFinished ? 'Program sudah selesai. Jadwal ini tetap tersimpan sebagai riwayat belajar dan dapat digunakan untuk melihat kembali periode, ruang, tutor, serta pertemuan yang pernah diikuti.' : $scheduleDescription }}
                             </div>
                         </article>
 
                         <div class="mt-6">
-                            <h4 class="text-sm font-extrabold uppercase tracking-wide text-slate-500">Pertemuan Mendatang</h4>
+                            <h4 class="text-sm font-extrabold uppercase tracking-wide text-slate-500">
+                                {{ $isProgramFinished ? 'Riwayat Pertemuan' : 'Pertemuan Mendatang' }}
+                            </h4>
                             <div class="mt-3 grid gap-2 sm:grid-cols-2">
                                 @foreach($assignedSchedules as $schedule)
                                     <button type="button"
@@ -154,7 +172,7 @@
                                         data-program="{{ $schedule->program?->name ?? '-' }}"
                                         data-room="{{ $schedule->classRoom?->name ?? $schedule->room ?: 'Ruang belum diisi' }}"
                                         data-tutor="{{ $schedule->tutor?->name ?: 'Tutor belum ditentukan' }}"
-                                        data-description="{{ $schedule->notes ?: 'Pertemuan belajar sesuai jadwal aktif siswa. Hadir sesuai tanggal, jam, ruang, dan tutor yang sudah ditentukan.' }}">
+                                        data-description="{{ $isProgramFinished ? 'Pertemuan ini sudah selesai dan tersimpan sebagai riwayat belajar siswa.' : ($schedule->notes ?: 'Pertemuan belajar sesuai jadwal aktif siswa. Hadir sesuai tanggal, jam, ruang, dan tutor yang sudah ditentukan.') }}">
                                         <span class="font-bold text-slate-900">{{ $schedule->class_date->format('d M Y') }}</span>
                                         <span class="inline-flex items-center gap-2 font-extrabold text-indigo-700">
                                             {{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }}
@@ -216,17 +234,17 @@
             </article>
 
             <aside class="space-y-6">
-                <article class="rounded-2xl border {{ $assignedSchedules->isNotEmpty() ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50' }} p-6">
+                <article class="rounded-2xl border {{ $isProgramFinished ? 'border-blue-100 bg-blue-50' : ($assignedSchedules->isNotEmpty() ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50') }} p-6">
                     <div class="flex items-start gap-4">
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white {{ $assignedSchedules->isNotEmpty() ? 'text-emerald-700' : 'text-amber-700' }}">
-                            <span class="material-symbols-outlined">{{ $assignedSchedules->isNotEmpty() ? 'event_available' : 'event_note' }}</span>
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white {{ $isProgramFinished ? 'text-blue-700' : ($assignedSchedules->isNotEmpty() ? 'text-emerald-700' : 'text-amber-700') }}">
+                            <span class="material-symbols-outlined">{{ $isProgramFinished ? 'history' : ($assignedSchedules->isNotEmpty() ? 'event_available' : 'event_note') }}</span>
                         </div>
                         <div>
-                            <h2 class="text-lg font-extrabold {{ $assignedSchedules->isNotEmpty() ? 'text-emerald-950' : 'text-amber-950' }}">
-                                {{ $assignedSchedules->isNotEmpty() ? 'Jadwal aktif' : 'Jadwal belum final' }}
+                            <h2 class="text-lg font-extrabold {{ $isProgramFinished ? 'text-blue-950' : ($assignedSchedules->isNotEmpty() ? 'text-emerald-950' : 'text-amber-950') }}">
+                                {{ $isProgramFinished ? 'Program selesai' : ($assignedSchedules->isNotEmpty() ? 'Jadwal aktif' : 'Jadwal belum final') }}
                             </h2>
-                            <p class="mt-2 text-sm font-semibold leading-6 {{ $assignedSchedules->isNotEmpty() ? 'text-emerald-800' : 'text-amber-800' }}">
-                                {{ $assignedSchedules->isNotEmpty() ? 'Jadwal ini sudah menjadi acuan belajar siswa. Jika ada perubahan mendesak, silakan hubungi admin.' : 'Pilih jadwal yang tersedia atau hubungi admin jika perlu menyesuaikan waktu belajar.' }}
+                            <p class="mt-2 text-sm font-semibold leading-6 {{ $isProgramFinished ? 'text-blue-800' : ($assignedSchedules->isNotEmpty() ? 'text-emerald-800' : 'text-amber-800') }}">
+                                {{ $isProgramFinished ? 'Akun tetap aktif. Siswa masih dapat melihat riwayat jadwal, invoice, dan melakukan perpanjangan program.' : ($assignedSchedules->isNotEmpty() ? 'Jadwal ini sudah menjadi acuan belajar siswa. Jika ada perubahan mendesak, silakan hubungi admin.' : 'Pilih jadwal yang tersedia atau hubungi admin jika perlu menyesuaikan waktu belajar.') }}
                             </p>
                         </div>
                     </div>

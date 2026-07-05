@@ -76,6 +76,9 @@
                                 @if($template->level)
                                     <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700">{{ $template->level }}</span>
                                 @endif
+                                @if($template->private_package)
+                                    <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">{{ $template->private_package }}</span>
+                                @endif
                                 <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Tutor: {{ $template->tutor?->name ?? 'Belum dipilih' }}</span>
                             </div>
                         </div>
@@ -155,6 +158,9 @@
                                 <p class="font-bold text-slate-950">{{ $schedule->program?->name ?? '-' }}</p>
                                 @if($schedule->class_type)
                                     <p class="mt-1 inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{{ $schedule->class_type }}</p>
+                                @endif
+                                @if($schedule->private_package)
+                                    <p class="mt-1 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">{{ $schedule->private_package }}</p>
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-slate-700">{{ $schedule->student?->name ?? '-' }}</td>
