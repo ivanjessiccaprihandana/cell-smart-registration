@@ -159,12 +159,8 @@
                                 <span>QRIS</span>
                                 <span class="material-symbols-outlined text-[20px]">qr_code_2</span>
                             </div>
-                            <div class="mt-4 flex aspect-square items-center justify-center rounded-lg bg-white p-6 shadow-inner">
-                                <div class="grid h-36 w-36 grid-cols-5 gap-1 rounded-lg bg-slate-950 p-3">
-                                    @foreach(range(1, 25) as $index)
-                                        <span class="{{ in_array($index, [1,2,3,6,11,13,15,16,17,21,22,23,25]) ? 'bg-white' : 'bg-slate-950' }} rounded-sm"></span>
-                                    @endforeach
-                                </div>
+                            <div class="mt-4 flex justify-center rounded-lg bg-white p-4 shadow-inner">
+                                <img src="{{ asset('images/qris-cell.jpeg') }}" alt="QRIS CELL English Course" class="max-h-[28rem] w-full rounded-md object-contain">
                             </div>
                             <p class="mt-4 text-center text-xs font-medium leading-5 text-slate-500">
                                 Scan QRIS melalui aplikasi mobile banking atau e-wallet Anda.

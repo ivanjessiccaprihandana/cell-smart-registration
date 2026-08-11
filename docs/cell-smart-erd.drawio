@@ -1,0 +1,108 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="cell-smart-erd" name="ERD CELL Smart Registration">
+    <mxGraphModel dx="1491" dy="959" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=22;fontColor=#0f172a;" value="Entity Relationship Diagram - Sistem Informasi Pendaftaran CELL English Course &amp; Bimbel" vertex="1">
+          <mxGeometry height="40" width="1180" x="290" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="program_categories" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#ecfdf5;strokeColor=#15803d;fontColor=#0f172a;fontSize=13;" value="&lt;b&gt;program_categories&lt;/b&gt;&lt;hr&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; parent_id&lt;br&gt;name&lt;br&gt;description&lt;br&gt;sort_order&lt;br&gt;is_active&lt;br&gt;timestamps" vertex="1">
+          <mxGeometry height="230" width="230" x="80" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="programs" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#eff6ff;strokeColor=#2563eb;fontColor=#0f172a;fontSize=13;" value="&lt;b&gt;programs&lt;/b&gt;&lt;hr&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; program_category_id&lt;br&gt;name&lt;br&gt;description&lt;br&gt;price&lt;br&gt;private_price&lt;br&gt;conversation_price&lt;br&gt;quota&lt;br&gt;start_date&lt;br&gt;end_date&lt;br&gt;is_active&lt;br&gt;timestamps" vertex="1">
+          <mxGeometry height="300" width="260" x="390" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="users" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#f5f3ff;strokeColor=#7c3aed;fontColor=#0f172a;fontSize=13;" value="&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;users&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;name&lt;br&gt;email&lt;br&gt;password&lt;br&gt;phone&lt;br&gt;address&lt;br&gt;is_admin&lt;br&gt;payment_proof&lt;br&gt;payment_status&lt;br&gt;registration_expires_at&lt;br&gt;timestamps&lt;/span&gt;" vertex="1">
+          <mxGeometry height="300" width="260" x="720" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="program_enrollments" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#fff7ed;strokeColor=#ea580c;fontColor=#0f172a;fontSize=13;" value="&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;program_enrollments&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; user_id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; program_id&lt;br&gt;class_type&lt;br&gt;private_package&lt;br&gt;price&lt;br&gt;payment_status&lt;br&gt;proof_file&lt;br&gt;start_date&lt;br&gt;end_date&lt;br&gt;timestamps&lt;/span&gt;" vertex="1">
+          <mxGeometry height="300" width="280" x="1110" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="schedule_templates" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#ecfeff;strokeColor=#0891b2;fontColor=#0f172a;fontSize=13;" value="&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;schedule_templates&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; program_id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; class_room_id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; tutor_id&lt;br&gt;batch_name&lt;br&gt;registration_start_date&lt;br&gt;registration_end_date&lt;br&gt;period_start_date&lt;br&gt;period_end_date&lt;br&gt;days&lt;br&gt;start_time&lt;br&gt;end_time&lt;br&gt;class_type&lt;br&gt;private_package&lt;br&gt;capacity&lt;br&gt;is_active&lt;br&gt;timestamps&lt;/span&gt;" vertex="1">
+          <mxGeometry height="390" width="280" x="320" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="schedule_preferences" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#fff7ed;strokeColor=#ea580c;fontColor=#0f172a;fontSize=13;" value="&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;schedule_preferences&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; user_id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; schedule_template_id&lt;br&gt;priority&lt;br&gt;status&lt;br&gt;&lt;/span&gt;&lt;span style=&quot;color: rgb(255, 255, 255);&quot;&gt;timestamps&lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;/span&gt;" vertex="1">
+          <mxGeometry height="210" width="270" x="720" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="class_schedules" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#fff7ed;strokeColor=#ea580c;fontColor=#0f172a;fontSize=13;" value="&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;class_schedules&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; user_id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; program_id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; schedule_template_id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; class_room_id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; tutor_id&lt;br&gt;class_date&lt;br&gt;start_time&lt;br&gt;end_time&lt;br&gt;class_type&lt;br&gt;private_package&lt;br&gt;description&lt;br&gt;timestamps&lt;/span&gt;" vertex="1">
+          <mxGeometry height="330" width="280" x="1120" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="class_rooms" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#ecfdf5;strokeColor=#15803d;fontColor=#0f172a;fontSize=13;" value="&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;class_rooms&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;name&lt;br&gt;room_type&lt;br&gt;capacity&lt;br&gt;is_active&lt;br&gt;timestamps&lt;/span&gt;" vertex="1">
+          <mxGeometry height="190" width="230" x="40" y="570" as="geometry" />
+        </mxCell>
+        <mxCell id="tutors" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#ecfdf5;strokeColor=#15803d;fontColor=#0f172a;fontSize=13;" value="&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;tutors&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; program_id&lt;br&gt;name&lt;br&gt;email&lt;br&gt;phone&lt;br&gt;level&lt;br&gt;is_active&lt;br&gt;timestamps&lt;/span&gt;" vertex="1">
+          <mxGeometry height="220" width="230" x="400" y="1230" as="geometry" />
+        </mxCell>
+        <mxCell id="placement_questions" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#ecfdf5;strokeColor=#15803d;fontColor=#0f172a;fontSize=13;" value="&lt;b&gt;placement_questions&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;question&lt;br&gt;option_a&lt;br&gt;option_b&lt;br&gt;option_c&lt;br&gt;option_d&lt;br&gt;correct_answer&lt;br&gt;is_active&lt;br&gt;timestamps&lt;/span&gt;" vertex="1">
+          <mxGeometry height="250" width="250" x="1420" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="placement_test_attempts" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#fff7ed;strokeColor=#ea580c;fontColor=#0f172a;fontSize=13;" value="&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;placement_test_attempts&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;&lt;b&gt;FK&lt;/b&gt; user_id&lt;br&gt;score&lt;br&gt;total_questions&lt;br&gt;percentage&lt;br&gt;level&lt;br&gt;answers&lt;br&gt;started_at&lt;br&gt;finished_at&lt;br&gt;timestamps&lt;/span&gt;" vertex="1">
+          <mxGeometry height="270" width="250" x="1480" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="home_classes" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#ecfdf5;strokeColor=#15803d;fontColor=#0f172a;fontSize=13;" value="&lt;b style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;home_classes&lt;/b&gt;&lt;hr&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;b&gt;PK&lt;/b&gt; id&lt;br&gt;title&lt;br&gt;subtitle&lt;br&gt;description&lt;br&gt;icon&lt;br&gt;route&lt;br&gt;sort_order&lt;br&gt;is_active&lt;br&gt;timestamps&lt;/span&gt;" vertex="1">
+          <mxGeometry height="230" width="250" x="1480" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fillColor=#f8fafc;strokeColor=#cbd5e1;fontColor=#0f172a;fontSize=13;" value="&lt;b&gt;Keterangan Warna&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#15803d&quot;&gt;Hijau&lt;/font&gt;: Data master&lt;br&gt;&lt;font color=&quot;#7c3aed&quot;&gt;Ungu&lt;/font&gt;: Akun pengguna&lt;br&gt;&lt;font color=&quot;#ea580c&quot;&gt;Oranye&lt;/font&gt;: Data transaksi/proses&lt;br&gt;&lt;font color=&quot;#2563eb&quot;&gt;Biru&lt;/font&gt;: Data program utama" vertex="1">
+          <mxGeometry height="130" width="330" x="10" y="1500" as="geometry" />
+        </mxCell>
+        <mxCell id="e_cat_parent" edge="1" parent="1" source="program_categories" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="program_categories" value="1..n">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="40" y="245" />
+              <mxPoint x="40" y="340" />
+              <mxPoint x="195" y="340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_cat_programs" edge="1" parent="1" source="program_categories" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="programs" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_program_enrollments" edge="1" parent="1" source="programs" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="program_enrollments" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_user_enrollments" edge="1" parent="1" source="users" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="program_enrollments" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_program_templates" edge="1" parent="1" source="programs" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="schedule_templates" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_room_templates" edge="1" parent="1" source="class_rooms" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="schedule_templates" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tutor_templates" edge="1" parent="1" source="tutors" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="schedule_templates" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_template_preferences" edge="1" parent="1" source="schedule_templates" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="schedule_preferences" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_user_preferences" edge="1" parent="1" source="users" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="schedule_preferences" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_template_schedules" edge="1" parent="1" source="schedule_templates" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="class_schedules" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_user_schedules" edge="1" parent="1" source="users" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="class_schedules" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_program_schedules" edge="1" parent="1" source="programs" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="class_schedules" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_room_schedules" edge="1" parent="1" source="class_rooms" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="class_schedules" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="m0lQDuN8XFEGbY3mQpga-2" connectable="0" parent="e_room_schedules" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Text" vertex="1">
+          <mxGeometry relative="1" x="0.3068" y="4" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_tutor_schedules" edge="1" parent="1" source="tutors" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="class_schedules" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_user_attempts" edge="1" parent="1" source="users" style="endArrow=block;html=1;rounded=0;edgeStyle=orthogonalEdgeStyle;strokeColor=#334155;fontColor=#334155;" target="placement_test_attempts" value="1..n">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
