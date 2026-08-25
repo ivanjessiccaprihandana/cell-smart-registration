@@ -1,4 +1,4 @@
-I be sad she won't do bath the one on the trail like the one that just do it when we had to come straight wheel in the task when I hold to the tables the secret is the moment heel and the s and the song carry on and feel the human trusting all I don't trust might give her chances given a chance is giving up I don't know sans is giving up with dance is giving up be giving up the ceiling like us when it rains you try to take smells every so dangerous I've been inside this life it's the slide it's the side you think yeah to say yeah long rolling do engine drug show ing@extends('layouts.admin')
+@extends('layouts.admin')
 
 @php($pageTitle = 'Ruang Kelas')
 
