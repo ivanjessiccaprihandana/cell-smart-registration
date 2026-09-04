@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 
 class PlacementTestController extends Controller
 {
-    private const TEST_DURATION_SECONDS = 10;
+    private const TEST_DURATION_SECONDS = 60 * 60;
 
     public function index()
     {

@@ -14,12 +14,23 @@ use App\Models\ScheduleTemplate;
 use App\Models\Tutor;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\CellAlignment;
+use OpenSpout\Common\Entity\Style\CellVerticalAlignment;
+use OpenSpout\Common\Entity\Style\Color;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Writer\AutoFilter;
+use OpenSpout\Writer\XLSX\Entity\SheetView;
+use OpenSpout\Writer\XLSX\Writer;
 
 class AdminController extends Controller
 {
+    private const RECAP_STUDENT_PREVIEW_LIMIT = 8;
+
     public function dashboard()
     {
         $programs = Program::latest()
@@ -89,6 +100,415 @@ class AdminController extends Controller
                     ->count(),
             ],
         ]);
+    }
+
+    public function recap(Request $request)
+    {
+        return view('admin.recap', [
+            'title' => 'Rekap Keseluruhan',
+            ...$this->recapData($request),
+        ]);
+    }
+
+    public function recapExport(Request $request)
+    {
+        $data = $this->recapData($request);
+        $period = ($data['from']?->toDateString() ?? 'awal')
+            . '-sampai-'
+            . ($data['to']?->toDateString() ?? 'sekarang');
+        $fileName = "rekap-cell-{$period}.xlsx";
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'cell_recap_');
+
+        abort_if($temporaryPath === false, 500, 'File Excel sementara tidak dapat dibuat.');
+
+        $this->writeRecapWorkbook($temporaryPath, $data);
+
+        return response()
+            ->download($temporaryPath, $fileName, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])
+            ->deleteFileAfterSend(true);
+    }
+
+    private function recapData(Request $request): array
+    {
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+        ]);
+
+        $from = filled($validated['from'] ?? null)
+            ? Carbon::parse($validated['from'])->startOfDay()
+            : null;
+        $to = filled($validated['to'] ?? null)
+            ? Carbon::parse($validated['to'])->endOfDay()
+            : null;
+
+        $enrollments = ProgramEnrollment::query()
+            ->with(['user', 'program'])
+            ->when($from, function ($query) use ($from) {
+                $query->where(function ($query) use ($from) {
+                    $query->whereDate('enrolled_at', '>=', $from->toDateString())
+                        ->orWhere(function ($query) use ($from) {
+                            $query->whereNull('enrolled_at')
+                                ->whereDate('created_at', '>=', $from->toDateString());
+                        });
+                });
+            })
+            ->when($to, function ($query) use ($to) {
+                $query->where(function ($query) use ($to) {
+                    $query->whereDate('enrolled_at', '<=', $to->toDateString())
+                        ->orWhere(function ($query) use ($to) {
+                            $query->whereNull('enrolled_at')
+                                ->whereDate('created_at', '<=', $to->toDateString());
+                        });
+                });
+            })
+            ->latest('enrolled_at')
+            ->get();
+
+        $placementAttempts = PlacementTestAttempt::query()
+            ->with('user')
+            ->when($from, fn ($query) => $query->whereDate('created_at', '>=', $from->toDateString()))
+            ->when($to, fn ($query) => $query->whereDate('created_at', '<=', $to->toDateString()))
+            ->get();
+
+        $classSchedules = ClassSchedule::query()
+            ->with(['student', 'program', 'tutor'])
+            ->when($from, fn ($query) => $query->whereDate('class_date', '>=', $from->toDateString()))
+            ->when($to, fn ($query) => $query->whereDate('class_date', '<=', $to->toDateString()))
+            ->get();
+
+        $students = $enrollments
+            ->pluck('user')
+            ->filter()
+            ->unique('id')
+            ->values();
+        $classSessions = $classSchedules->unique(function (ClassSchedule $schedule) {
+            return implode('|', [
+                $schedule->schedule_template_id,
+                $schedule->program_id,
+                $schedule->class_date?->format('Y-m-d'),
+                $schedule->start_time?->format('H:i'),
+                $schedule->room,
+            ]);
+        });
+
+        $programSummaries = Program::query()
+            ->orderBy('name')
+            ->get()
+            ->map(function (Program $program) use ($enrollments, $placementAttempts, $classSchedules) {
+                $programEnrollments = $enrollments->where('program_id', $program->id);
+                $programStudents = $programEnrollments->pluck('user')->filter()->unique('id');
+                $programAttempts = $placementAttempts->filter(
+                    fn (PlacementTestAttempt $attempt) => (string) $attempt->user?->program === (string) $program->id
+                );
+                $programSchedules = $classSchedules->where('program_id', $program->id);
+
+                return [
+                    'name' => $program->name,
+                    'enrollments' => $programEnrollments->count(),
+                    'students' => $programStudents->count(),
+                    'student_names' => $programStudents->pluck('name')->filter()->sort()->values(),
+                    'payments_accepted' => $programStudents->where('payment_status', 'diterima')->count(),
+                    'placement_completed' => $programAttempts->pluck('user_id')->unique()->count(),
+                    'scheduled_students' => $programSchedules->pluck('user_id')->filter()->unique()->count(),
+                    'sessions' => $programSchedules->unique(function (ClassSchedule $schedule) {
+                        return implode('|', [
+                            $schedule->schedule_template_id,
+                            $schedule->class_date?->format('Y-m-d'),
+                            $schedule->start_time?->format('H:i'),
+                            $schedule->room,
+                        ]);
+                    })->count(),
+                ];
+            })
+            ->sortByDesc('enrollments')
+            ->values();
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'enrollments' => $enrollments,
+            'programSummaries' => $programSummaries,
+            'enrollmentStatusCounts' => $enrollments->countBy('status'),
+            'paymentStatusCounts' => $students->countBy(fn (User $user) => $user->payment_status ?: 'belum_upload'),
+            'placementLevelCounts' => $placementAttempts->countBy('level')->sortDesc(),
+            'stats' => [
+                'totalEnrollments' => $enrollments->count(),
+                'uniqueStudents' => $students->count(),
+                'acceptedPayments' => $students->where('payment_status', 'diterima')->count(),
+                'placementCompleted' => $placementAttempts->pluck('user_id')->unique()->count(),
+                'averagePlacementScore' => $placementAttempts->isNotEmpty()
+                    ? (int) round($placementAttempts->avg('score_percentage'))
+                    : 0,
+                'scheduledStudents' => $classSchedules->pluck('user_id')->filter()->unique()->count(),
+                'classSessions' => $classSessions->count(),
+                'activePrograms' => Program::where('status', 'active')->count(),
+                'activeTutors' => Tutor::where('is_active', true)->count(),
+                'activeRooms' => ClassRoom::where('is_active', true)->count(),
+            ],
+            'placementAttempts' => $placementAttempts,
+            'classSchedules' => $classSchedules,
+        ];
+    }
+
+    private function writeRecapWorkbook(string $path, array $data): void
+    {
+        $programLabels = Program::pluck('name', 'id');
+        $titleStyle = (new Style())
+            ->setFontBold()
+            ->setFontSize(18)
+            ->setFontColor(Color::WHITE)
+            ->setBackgroundColor(Color::DARK_BLUE);
+        $sectionStyle = (new Style())
+            ->setFontBold()
+            ->setFontSize(12)
+            ->setFontColor(Color::DARK_BLUE)
+            ->setBackgroundColor('E0E7FF');
+        $headerStyle = (new Style())
+            ->setFontBold()
+            ->setFontColor(Color::WHITE)
+            ->setBackgroundColor('4F46E5')
+            ->setCellAlignment(CellAlignment::CENTER)
+            ->setShouldWrapText();
+        $programRowStyle = (new Style())
+            ->setShouldWrapText()
+            ->setCellVerticalAlignment(CellVerticalAlignment::TOP);
+        $programMetricStyle = (new Style())
+            ->setCellAlignment(CellAlignment::CENTER)
+            ->setCellVerticalAlignment(CellVerticalAlignment::TOP);
+
+        $enrollmentStatusLabels = [
+            'pending' => 'Menunggu',
+            'active' => 'Aktif',
+            'completed' => 'Selesai',
+            'rejected' => 'Ditolak',
+        ];
+        $paymentStatusLabels = [
+            'belum_upload' => 'Belum Upload',
+            'menunggu_verifikasi' => 'Menunggu Verifikasi',
+            'diterima' => 'Diterima',
+            'ditolak' => 'Ditolak',
+        ];
+        $periodLabel = ($data['from']?->format('d-m-Y') ?? 'Awal')
+            . ' s.d. '
+            . ($data['to']?->format('d-m-Y') ?? 'Sekarang');
+
+        $writer = new Writer();
+        $writer->setCreator('CELL English Course');
+        $writer->openToFile($path);
+
+        $summarySheet = $writer->getCurrentSheet();
+        $summarySheet->setName('Ringkasan');
+        $summarySheet->setSheetView((new SheetView())->setShowGridLines(false)->setZoomScale(95));
+        $summarySheet->setColumnWidth(34, 1);
+        $summarySheet->setColumnWidth(22, 2);
+
+        $writer->addRow(Row::fromValues(['REKAP KESELURUHAN CELL'], $titleStyle));
+        $writer->addRow(Row::fromValues(['Periode', $periodLabel]));
+        $writer->addRow(Row::fromValues(['Dibuat pada', now()->format('d-m-Y H:i')]));
+        $writer->addRow(Row::fromValues([]));
+        $writer->addRow(Row::fromValues(['INDIKATOR UTAMA'], $sectionStyle));
+        $writer->addRow(Row::fromValues(['Indikator', 'Jumlah'], $headerStyle));
+        $writer->addRows([
+            Row::fromValues(['Total Pendaftaran', $data['stats']['totalEnrollments']]),
+            Row::fromValues(['Siswa Unik', $data['stats']['uniqueStudents']]),
+            Row::fromValues(['Pembayaran Diterima', $data['stats']['acceptedPayments']]),
+            Row::fromValues(['Placement Test Selesai', $data['stats']['placementCompleted']]),
+            Row::fromValues(['Rata-rata Nilai Placement', $data['stats']['averagePlacementScore'].'%']),
+            Row::fromValues(['Siswa Terjadwal', $data['stats']['scheduledStudents']]),
+            Row::fromValues(['Sesi Kelas', $data['stats']['classSessions']]),
+            Row::fromValues(['Program Aktif', $data['stats']['activePrograms']]),
+            Row::fromValues(['Tutor Aktif', $data['stats']['activeTutors']]),
+            Row::fromValues(['Ruang Aktif', $data['stats']['activeRooms']]),
+        ]);
+        $writer->addRow(Row::fromValues([]));
+        $writer->addRow(Row::fromValues(['STATUS PENDAFTARAN'], $sectionStyle));
+        $writer->addRow(Row::fromValues(['Status', 'Jumlah'], $headerStyle));
+        foreach ($enrollmentStatusLabels as $status => $label) {
+            $writer->addRow(Row::fromValues([$label, $data['enrollmentStatusCounts']->get($status, 0)]));
+        }
+        $writer->addRow(Row::fromValues([]));
+        $writer->addRow(Row::fromValues(['STATUS PEMBAYARAN'], $sectionStyle));
+        $writer->addRow(Row::fromValues(['Status', 'Jumlah'], $headerStyle));
+        foreach ($paymentStatusLabels as $status => $label) {
+            $writer->addRow(Row::fromValues([$label, $data['paymentStatusCounts']->get($status, 0)]));
+        }
+        $writer->addRow(Row::fromValues([]));
+        $writer->addRow(Row::fromValues(['LEVEL PLACEMENT TEST'], $sectionStyle));
+        $writer->addRow(Row::fromValues(['Level', 'Jumlah'], $headerStyle));
+        if ($data['placementLevelCounts']->isEmpty()) {
+            $writer->addRow(Row::fromValues(['Belum ada hasil', 0]));
+        } else {
+            foreach ($data['placementLevelCounts'] as $level => $count) {
+                $writer->addRow(Row::fromValues([$level ?: 'Belum ditentukan', $count]));
+            }
+        }
+
+        $programSheet = $writer->addNewSheetAndMakeItCurrent();
+        $programSheet->setName('Per Program');
+        $programSheet->setSheetView((new SheetView())->setFreezeRow(1)->setShowGridLines(false)->setZoomScale(90));
+        $programSheet->setColumnWidth(28, 1);
+        $programSheet->setColumnWidth(42, 2);
+        $programSheet->setColumnWidthForRange(15, 3, 8);
+        $writer->addRow(Row::fromValues([
+            'Program',
+            'Nama Siswa',
+            'Pendaftaran',
+            'Siswa',
+            'Pembayaran Diterima',
+            'Placement Selesai',
+            'Siswa Terjadwal',
+            'Sesi',
+        ], $headerStyle));
+        foreach ($data['programSummaries'] as $program) {
+            $studentNames = $program['student_names'];
+            $visibleStudentNames = $studentNames
+                ->take(self::RECAP_STUDENT_PREVIEW_LIMIT)
+                ->values()
+                ->map(fn (string $name, int $index) => ($index + 1).'. '.$name);
+            $remainingStudents = max(0, $studentNames->count() - self::RECAP_STUDENT_PREVIEW_LIMIT);
+
+            if ($remainingStudents > 0) {
+                $visibleStudentNames->push("+ {$remainingStudents} siswa lainnya (lihat sheet Pendaftaran)");
+            }
+
+            $studentList = $visibleStudentNames->isEmpty()
+                ? '-'
+                : $visibleStudentNames->implode("\n");
+            $visibleLines = max(1, $visibleStudentNames->count());
+
+            $row = Row::fromValuesWithStyles([
+                $program['name'],
+                $studentList,
+                $program['enrollments'],
+                $program['students'],
+                $program['payments_accepted'],
+                $program['placement_completed'],
+                $program['scheduled_students'],
+                $program['sessions'],
+            ], $programRowStyle, [
+                2 => $programMetricStyle,
+                3 => $programMetricStyle,
+                4 => $programMetricStyle,
+                5 => $programMetricStyle,
+                6 => $programMetricStyle,
+                7 => $programMetricStyle,
+            ])->setHeight(max(22, $visibleLines * 18));
+
+            $writer->addRow($row);
+        }
+        $programSheet->setAutoFilter(new AutoFilter(0, 1, 7, max(1, $data['programSummaries']->count() + 1)));
+
+        $enrollmentSheet = $writer->addNewSheetAndMakeItCurrent();
+        $enrollmentSheet->setName('Pendaftaran');
+        $enrollmentSheet->setSheetView((new SheetView())->setFreezeRow(1)->setShowGridLines(false)->setZoomScale(90));
+        $enrollmentSheet->setColumnWidth(19, 1);
+        $enrollmentSheet->setColumnWidth(25, 2);
+        $enrollmentSheet->setColumnWidth(32, 3);
+        $enrollmentSheet->setColumnWidth(18, 4);
+        $enrollmentSheet->setColumnWidth(28, 5);
+        $enrollmentSheet->setColumnWidthForRange(18, 6, 9);
+        $writer->addRow(Row::fromValues([
+            'Tanggal',
+            'Nama Siswa',
+            'Email',
+            'WhatsApp',
+            'Program',
+            'Jenis Kelas',
+            'Paket Private',
+            'Status Pendaftaran',
+            'Status Pembayaran',
+        ], $headerStyle));
+        foreach ($data['enrollments'] as $enrollment) {
+            $registeredAt = $enrollment->enrolled_at ?? $enrollment->created_at;
+            $writer->addRow(Row::fromValues([
+                $registeredAt?->format('d-m-Y H:i') ?? '-',
+                $enrollment->user?->name ?? 'User terhapus',
+                $enrollment->user?->email ?? '-',
+                $enrollment->user?->whatsapp ?? '-',
+                $enrollment->program?->name ?? 'Program terhapus',
+                $enrollment->class_type ?: '-',
+                $enrollment->private_package ?: '-',
+                $enrollmentStatusLabels[$enrollment->status] ?? ucfirst($enrollment->status),
+                $paymentStatusLabels[$enrollment->user?->payment_status] ?? ucfirst($enrollment->user?->payment_status ?: 'belum_upload'),
+            ]));
+        }
+        $enrollmentSheet->setAutoFilter(new AutoFilter(0, 1, 8, max(1, $data['enrollments']->count() + 1)));
+
+        $placementSheet = $writer->addNewSheetAndMakeItCurrent();
+        $placementSheet->setName('Placement Test');
+        $placementSheet->setSheetView((new SheetView())->setFreezeRow(1)->setShowGridLines(false)->setZoomScale(90));
+        $placementSheet->setColumnWidth(19, 1);
+        $placementSheet->setColumnWidth(25, 2);
+        $placementSheet->setColumnWidth(32, 3);
+        $placementSheet->setColumnWidth(28, 4);
+        $placementSheet->setColumnWidthForRange(16, 5, 9);
+        $writer->addRow(Row::fromValues([
+            'Tanggal',
+            'Nama Siswa',
+            'Email',
+            'Program',
+            'Jawaban Benar',
+            'Jumlah Soal',
+            'Nilai',
+            'Level',
+            'Durasi',
+        ], $headerStyle));
+        foreach ($data['placementAttempts'] as $attempt) {
+            $writer->addRow(Row::fromValues([
+                $attempt->created_at?->format('d-m-Y H:i') ?? '-',
+                $attempt->user?->name ?? 'User terhapus',
+                $attempt->user?->email ?? '-',
+                $attempt->user?->program
+                    ? ($programLabels->get($attempt->user->program) ?? '-')
+                    : '-',
+                $attempt->correct_answers,
+                $attempt->total_questions,
+                $attempt->score_percentage.'%',
+                $attempt->level,
+                $attempt->duration_seconds !== null
+                    ? gmdate('H:i:s', $attempt->duration_seconds)
+                    : '-',
+            ]));
+        }
+        $placementSheet->setAutoFilter(new AutoFilter(0, 1, 8, max(1, $data['placementAttempts']->count() + 1)));
+
+        $scheduleSheet = $writer->addNewSheetAndMakeItCurrent();
+        $scheduleSheet->setName('Jadwal Kelas');
+        $scheduleSheet->setSheetView((new SheetView())->setFreezeRow(1)->setShowGridLines(false)->setZoomScale(90));
+        $scheduleSheet->setColumnWidth(15, 1);
+        $scheduleSheet->setColumnWidth(25, 2);
+        $scheduleSheet->setColumnWidth(28, 3);
+        $scheduleSheet->setColumnWidth(25, 4);
+        $scheduleSheet->setColumnWidth(30, 5);
+        $scheduleSheet->setColumnWidthForRange(15, 6, 8);
+        $writer->addRow(Row::fromValues([
+            'Tanggal',
+            'Nama Siswa',
+            'Program',
+            'Tutor',
+            'Sesi',
+            'Mulai',
+            'Selesai',
+            'Ruang',
+        ], $headerStyle));
+        foreach ($data['classSchedules']->sortBy('class_date') as $schedule) {
+            $writer->addRow(Row::fromValues([
+                $schedule->class_date?->format('d-m-Y') ?? '-',
+                $schedule->student?->name ?? '-',
+                $schedule->program?->name ?? 'Program terhapus',
+                $schedule->tutor?->name ?? '-',
+                $schedule->session_name,
+                $schedule->start_time?->format('H:i') ?? '-',
+                $schedule->end_time?->format('H:i') ?? '-',
+                $schedule->room ?: '-',
+            ]));
+        }
+        $scheduleSheet->setAutoFilter(new AutoFilter(0, 1, 7, max(1, $data['classSchedules']->count() + 1)));
+
+        $writer->close();
     }
 
     public function registrants(Request $request)

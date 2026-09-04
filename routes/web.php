@@ -41,6 +41,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->group(function () {
         Route::redirect('/admin', '/admin/dashboard')->name('admin.index');
         Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('/admin/recap', [AdminController::class, 'recap'])->name('admin.recap');
+        Route::get('/admin/recap/excel', [AdminController::class, 'recapExport'])->name('admin.recap.export');
         Route::get('/admin/registrants', [AdminController::class, 'registrants'])->name('admin.registrants.index');
         Route::get('/admin/registrants/{user}/edit', [AdminController::class, 'editRegistrant'])->name('admin.registrants.edit');
         Route::put('/admin/registrants/{user}', [AdminController::class, 'updateRegistrant'])->name('admin.registrants.update');

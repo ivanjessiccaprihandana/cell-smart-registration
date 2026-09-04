@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ClassRoom;
 use App\Models\ClassSchedule;
 use App\Models\PlacementQuestion;
+use App\Models\PlacementTestAttempt;
 use App\Models\Program;
 use App\Models\ProgramCategory;
 use App\Models\ProgramEnrollment;
@@ -232,6 +233,150 @@ class AdminManagementFlowTest extends TestCase
             ->assertRedirect(route('admin.placement.questions.index'));
 
         $this->assertDatabaseMissing('placement_questions', ['id' => $question->id]);
+    }
+
+    public function test_admin_can_view_overall_recap_with_database_statistics(): void
+    {
+        $program = $this->createProgram('English for Recap', 'Bahasa Inggris');
+        $student = User::factory()->create([
+            'name' => 'Siswa Rekap',
+            'program' => (string) $program->id,
+            'class_type' => 'Reguler',
+            'payment_status' => 'diterima',
+        ]);
+
+        ProgramEnrollment::create([
+            'user_id' => $student->id,
+            'program_id' => $program->id,
+            'class_type' => 'Reguler',
+            'type' => 'new',
+            'enrolled_at' => now(),
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        PlacementTestAttempt::create([
+            'user_id' => $student->id,
+            'total_questions' => 10,
+            'correct_answers' => 8,
+            'score_percentage' => 80,
+            'level' => 'Upper-Intermediate',
+            'recommended_program' => 'Upper-Intermediate',
+            'answers' => [],
+            'duration_seconds' => 900,
+        ]);
+
+        ClassSchedule::create([
+            'user_id' => $student->id,
+            'program_id' => $program->id,
+            'class_type' => 'Reguler',
+            'class_date' => now()->toDateString(),
+            'session_name' => 'Kelas Rekap',
+            'start_time' => '15:00',
+            'end_time' => '16:00',
+            'room' => 'Ruang Rekap',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.recap', [
+                'from' => now()->subDay()->toDateString(),
+                'to' => now()->addDay()->toDateString(),
+            ]))
+            ->assertOk()
+            ->assertSee('Rekap Keseluruhan')
+            ->assertSee('English for Recap')
+            ->assertSee('Siswa Rekap')
+            ->assertSee('Upper-Intermediate')
+            ->assertViewHas('stats', function (array $stats) {
+                return $stats['totalEnrollments'] === 1
+                    && $stats['uniqueStudents'] === 1
+                    && $stats['acceptedPayments'] === 1
+                    && $stats['placementCompleted'] === 1
+                    && $stats['averagePlacementScore'] === 80
+                    && $stats['scheduledStudents'] === 1
+                    && $stats['classSessions'] === 1;
+            });
+
+        $exportResponse = $this->actingAs($this->admin)
+            ->get(route('admin.recap.export', [
+                'from' => now()->subDay()->toDateString(),
+                'to' => now()->addDay()->toDateString(),
+            ]));
+
+        $exportResponse
+            ->assertOk()
+            ->assertDownload('rekap-cell-2026-07-01-sampai-2026-07-03.xlsx');
+
+        $exportPath = $exportResponse->baseResponse->getFile()->getPathname();
+        $archive = new \ZipArchive();
+
+        $this->assertTrue($archive->open($exportPath) === true);
+        $this->assertNotFalse($archive->locateName('xl/workbook.xml'));
+        $this->assertNotFalse($archive->locateName('xl/worksheets/sheet1.xml'));
+        $workbookXml = $archive->getFromName('xl/workbook.xml');
+
+        $this->assertIsString($workbookXml);
+        $this->assertStringContainsString('name="Ringkasan"', $workbookXml);
+        $this->assertStringContainsString('name="Per Program"', $workbookXml);
+        $this->assertStringContainsString('name="Pendaftaran"', $workbookXml);
+        $this->assertStringContainsString('name="Placement Test"', $workbookXml);
+        $this->assertStringContainsString('name="Jadwal Kelas"', $workbookXml);
+
+        $archive->close();
+        @unlink($exportPath);
+    }
+
+    public function test_overall_recap_rejects_an_invalid_date_range(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.recap', [
+                'from' => '2026-07-10',
+                'to' => '2026-07-01',
+            ]))
+            ->assertSessionHasErrors('to');
+    }
+
+    public function test_exported_program_recap_formats_many_student_names_as_a_bounded_numbered_list(): void
+    {
+        $program = $this->createProgram('English for Export', 'Bahasa Inggris');
+
+        foreach (range(1, 10) as $studentNumber) {
+            $studentName = sprintf('Siswa %02d Export', $studentNumber);
+            $student = User::factory()->create([
+                'name' => $studentName,
+                'program' => (string) $program->id,
+                'class_type' => 'Reguler',
+            ]);
+
+            ProgramEnrollment::create([
+                'user_id' => $student->id,
+                'program_id' => $program->id,
+                'class_type' => 'Reguler',
+                'type' => 'new',
+                'enrolled_at' => now(),
+                'start_date' => now()->toDateString(),
+                'end_date' => now()->addMonth()->toDateString(),
+                'status' => 'active',
+            ]);
+        }
+
+        $exportResponse = $this->actingAs($this->admin)
+            ->get(route('admin.recap.export'));
+        $exportPath = $exportResponse->baseResponse->getFile()->getPathname();
+        $archive = new \ZipArchive();
+
+        $this->assertTrue($archive->open($exportPath) === true);
+
+        $programSheetXml = $archive->getFromName('xl/worksheets/sheet2.xml');
+
+        $this->assertIsString($programSheetXml);
+        $this->assertStringContainsString("1. Siswa 01 Export\n2. Siswa 02 Export", $programSheetXml);
+        $this->assertStringContainsString("8. Siswa 08 Export\n+ 2 siswa lainnya (lihat sheet Pendaftaran)", $programSheetXml);
+        $this->assertMatchesRegularExpression('/<row r="2"[^>]*ht="162"[^>]*>/', $programSheetXml);
+
+        $archive->close();
+        @unlink($exportPath);
     }
 
     public function test_admin_can_create_update_schedule_template_and_sync_existing_student_schedules(): void

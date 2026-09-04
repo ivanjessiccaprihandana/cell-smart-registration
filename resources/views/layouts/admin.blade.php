@@ -22,6 +22,10 @@
                     <span class="material-symbols-outlined text-[20px]">dashboard</span>
                     Dashboard
                 </a>
+                <a href="{{ route('admin.recap') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.recap') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
+                    <span class="material-symbols-outlined text-[20px]">summarize</span>
+                    Rekap Keseluruhan
+                </a>
                 <a href="{{ route('admin.registrants.index') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 {{ request()->routeIs('admin.registrants.*') ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100 hover:text-slate-900' }}">
                     <span class="material-symbols-outlined text-[20px]">group</span>
                     Pendaftar
@@ -88,6 +92,10 @@
                                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.dashboard') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">dashboard</span>
                                     Dashboard
+                                </a>
+                                <a href="{{ route('admin.recap') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.recap') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
+                                    <span class="material-symbols-outlined text-[20px]">summarize</span>
+                                    Rekap Keseluruhan
                                 </a>
                                 <a href="{{ route('admin.registrants.index') }}" class="mt-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.registrants.*') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100' }}">
                                     <span class="material-symbols-outlined text-[20px]">group</span>

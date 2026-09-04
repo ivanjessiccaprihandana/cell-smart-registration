@@ -45,7 +45,7 @@
                 @unless($showResult)
                     <span class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700">
                         <span class="material-symbols-outlined text-[18px]">timer</span>
-                        <span id="timer">30:00</span>
+                        <span id="timer">60:00</span>
                     </span>
                 @endunless
                 <a href="{{ route('home') }}" class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-bold text-slate-700 hover:border-indigo-500 hover:text-indigo-600">Beranda</a>
