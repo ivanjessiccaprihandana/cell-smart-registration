@@ -20,7 +20,6 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\CellAlignment;
-use OpenSpout\Common\Entity\Style\CellVerticalAlignment;
 use OpenSpout\Common\Entity\Style\Color;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\AutoFilter;
@@ -29,8 +28,6 @@ use OpenSpout\Writer\XLSX\Writer;
 
 class AdminController extends Controller
 {
-    private const RECAP_STUDENT_PREVIEW_LIMIT = 8;
-
     public function dashboard()
     {
         $programs = Program::latest()
@@ -209,7 +206,6 @@ class AdminController extends Controller
                     'name' => $program->name,
                     'enrollments' => $programEnrollments->count(),
                     'students' => $programStudents->count(),
-                    'student_names' => $programStudents->pluck('name')->filter()->sort()->values(),
                     'payments_accepted' => $programStudents->where('payment_status', 'diterima')->count(),
                     'placement_completed' => $programAttempts->pluck('user_id')->unique()->count(),
                     'scheduled_students' => $programSchedules->pluck('user_id')->filter()->unique()->count(),
@@ -224,6 +220,42 @@ class AdminController extends Controller
                 ];
             })
             ->sortByDesc('enrollments')
+            ->values();
+
+        $placementStudentIds = $placementAttempts
+            ->pluck('user_id')
+            ->filter()
+            ->map(fn ($userId) => (string) $userId)
+            ->flip();
+        $scheduledStudentProgramKeys = $classSchedules
+            ->filter(fn (ClassSchedule $schedule) => filled($schedule->user_id))
+            ->mapWithKeys(fn (ClassSchedule $schedule) => [
+                $schedule->user_id.'|'.$schedule->program_id => true,
+            ]);
+        $studentDetails = $enrollments
+            ->map(function (ProgramEnrollment $enrollment) use ($placementStudentIds, $scheduledStudentProgramKeys) {
+                $registeredAt = $enrollment->enrolled_at ?? $enrollment->created_at;
+                $hasCompletedPlacement = $enrollment->user_id
+                    && (string) $enrollment->user?->program === (string) $enrollment->program_id
+                    && $placementStudentIds->has((string) $enrollment->user_id);
+                $hasSchedule = $enrollment->user_id
+                    && $scheduledStudentProgramKeys->has($enrollment->user_id.'|'.$enrollment->program_id);
+
+                return [
+                    'registered_at' => $registeredAt,
+                    'name' => $enrollment->user?->name ?? 'User terhapus',
+                    'email' => $enrollment->user?->email ?? '-',
+                    'whatsapp' => $enrollment->user?->whatsapp ?? '-',
+                    'program' => $enrollment->program?->name ?? 'Program terhapus',
+                    'class_type' => $enrollment->class_type ?: '-',
+                    'private_package' => $enrollment->private_package ?: '-',
+                    'enrollment_status' => $enrollment->status,
+                    'payment_status' => $enrollment->user?->payment_status ?: 'belum_upload',
+                    'placement_status' => $hasCompletedPlacement ? 'Selesai' : 'Belum',
+                    'schedule_status' => $hasSchedule ? 'Terjadwal' : 'Belum',
+                ];
+            })
+            ->sortBy(fn (array $student) => Str::lower($student['program'].'|'.$student['name']))
             ->values();
 
         return [
@@ -250,6 +282,7 @@ class AdminController extends Controller
             ],
             'placementAttempts' => $placementAttempts,
             'classSchedules' => $classSchedules,
+            'studentDetails' => $studentDetails,
         ];
     }
 
@@ -272,12 +305,8 @@ class AdminController extends Controller
             ->setBackgroundColor('4F46E5')
             ->setCellAlignment(CellAlignment::CENTER)
             ->setShouldWrapText();
-        $programRowStyle = (new Style())
-            ->setShouldWrapText()
-            ->setCellVerticalAlignment(CellVerticalAlignment::TOP);
         $programMetricStyle = (new Style())
-            ->setCellAlignment(CellAlignment::CENTER)
-            ->setCellVerticalAlignment(CellVerticalAlignment::TOP);
+            ->setCellAlignment(CellAlignment::CENTER);
 
         $enrollmentStatusLabels = [
             'pending' => 'Menunggu',
@@ -350,68 +379,56 @@ class AdminController extends Controller
         $programSheet->setName('Per Program');
         $programSheet->setSheetView((new SheetView())->setFreezeRow(1)->setShowGridLines(false)->setZoomScale(90));
         $programSheet->setColumnWidth(28, 1);
-        $programSheet->setColumnWidth(42, 2);
-        $programSheet->setColumnWidthForRange(15, 3, 8);
+        $programSheet->setColumnWidth(16, 2);
+        $programSheet->setColumnWidth(14, 3);
+        $programSheet->setColumnWidth(22, 4);
+        $programSheet->setColumnWidth(20, 5);
+        $programSheet->setColumnWidth(18, 6);
+        $programSheet->setColumnWidth(12, 7);
         $writer->addRow(Row::fromValues([
             'Program',
-            'Nama Siswa',
             'Pendaftaran',
-            'Siswa',
+            'Siswa Unik',
             'Pembayaran Diterima',
             'Placement Selesai',
             'Siswa Terjadwal',
             'Sesi',
         ], $headerStyle));
         foreach ($data['programSummaries'] as $program) {
-            $studentNames = $program['student_names'];
-            $visibleStudentNames = $studentNames
-                ->take(self::RECAP_STUDENT_PREVIEW_LIMIT)
-                ->values()
-                ->map(fn (string $name, int $index) => ($index + 1).'. '.$name);
-            $remainingStudents = max(0, $studentNames->count() - self::RECAP_STUDENT_PREVIEW_LIMIT);
-
-            if ($remainingStudents > 0) {
-                $visibleStudentNames->push("+ {$remainingStudents} siswa lainnya (lihat sheet Pendaftaran)");
-            }
-
-            $studentList = $visibleStudentNames->isEmpty()
-                ? '-'
-                : $visibleStudentNames->implode("\n");
-            $visibleLines = max(1, $visibleStudentNames->count());
-
             $row = Row::fromValuesWithStyles([
                 $program['name'],
-                $studentList,
                 $program['enrollments'],
                 $program['students'],
                 $program['payments_accepted'],
                 $program['placement_completed'],
                 $program['scheduled_students'],
                 $program['sessions'],
-            ], $programRowStyle, [
+            ], null, [
+                1 => $programMetricStyle,
                 2 => $programMetricStyle,
                 3 => $programMetricStyle,
                 4 => $programMetricStyle,
                 5 => $programMetricStyle,
                 6 => $programMetricStyle,
-                7 => $programMetricStyle,
-            ])->setHeight(max(22, $visibleLines * 18));
+            ]);
 
             $writer->addRow($row);
         }
-        $programSheet->setAutoFilter(new AutoFilter(0, 1, 7, max(1, $data['programSummaries']->count() + 1)));
+        $programSheet->setAutoFilter(new AutoFilter(0, 1, 6, max(1, $data['programSummaries']->count() + 1)));
 
-        $enrollmentSheet = $writer->addNewSheetAndMakeItCurrent();
-        $enrollmentSheet->setName('Pendaftaran');
-        $enrollmentSheet->setSheetView((new SheetView())->setFreezeRow(1)->setShowGridLines(false)->setZoomScale(90));
-        $enrollmentSheet->setColumnWidth(19, 1);
-        $enrollmentSheet->setColumnWidth(25, 2);
-        $enrollmentSheet->setColumnWidth(32, 3);
-        $enrollmentSheet->setColumnWidth(18, 4);
-        $enrollmentSheet->setColumnWidth(28, 5);
-        $enrollmentSheet->setColumnWidthForRange(18, 6, 9);
+        $studentSheet = $writer->addNewSheetAndMakeItCurrent();
+        $studentSheet->setName('Data Siswa');
+        $studentSheet->setSheetView((new SheetView())->setFreezeRow(1)->setShowGridLines(false)->setZoomScale(85));
+        $studentSheet->setColumnWidth(8, 1);
+        $studentSheet->setColumnWidth(19, 2);
+        $studentSheet->setColumnWidth(25, 3);
+        $studentSheet->setColumnWidth(32, 4);
+        $studentSheet->setColumnWidth(18, 5);
+        $studentSheet->setColumnWidth(28, 6);
+        $studentSheet->setColumnWidthForRange(18, 7, 12);
         $writer->addRow(Row::fromValues([
-            'Tanggal',
+            'No.',
+            'Tanggal Daftar',
             'Nama Siswa',
             'Email',
             'WhatsApp',
@@ -420,22 +437,26 @@ class AdminController extends Controller
             'Paket Private',
             'Status Pendaftaran',
             'Status Pembayaran',
+            'Placement',
+            'Jadwal',
         ], $headerStyle));
-        foreach ($data['enrollments'] as $enrollment) {
-            $registeredAt = $enrollment->enrolled_at ?? $enrollment->created_at;
+        foreach ($data['studentDetails'] as $index => $student) {
             $writer->addRow(Row::fromValues([
-                $registeredAt?->format('d-m-Y H:i') ?? '-',
-                $enrollment->user?->name ?? 'User terhapus',
-                $enrollment->user?->email ?? '-',
-                $enrollment->user?->whatsapp ?? '-',
-                $enrollment->program?->name ?? 'Program terhapus',
-                $enrollment->class_type ?: '-',
-                $enrollment->private_package ?: '-',
-                $enrollmentStatusLabels[$enrollment->status] ?? ucfirst($enrollment->status),
-                $paymentStatusLabels[$enrollment->user?->payment_status] ?? ucfirst($enrollment->user?->payment_status ?: 'belum_upload'),
+                $index + 1,
+                $student['registered_at']?->format('d-m-Y H:i') ?? '-',
+                $student['name'],
+                $student['email'],
+                $student['whatsapp'],
+                $student['program'],
+                $student['class_type'],
+                $student['private_package'],
+                $enrollmentStatusLabels[$student['enrollment_status']] ?? ucfirst($student['enrollment_status']),
+                $paymentStatusLabels[$student['payment_status']] ?? ucfirst($student['payment_status']),
+                $student['placement_status'],
+                $student['schedule_status'],
             ]));
         }
-        $enrollmentSheet->setAutoFilter(new AutoFilter(0, 1, 8, max(1, $data['enrollments']->count() + 1)));
+        $studentSheet->setAutoFilter(new AutoFilter(0, 1, 11, max(1, $data['studentDetails']->count() + 1)));
 
         $placementSheet = $writer->addNewSheetAndMakeItCurrent();
         $placementSheet->setName('Placement Test');

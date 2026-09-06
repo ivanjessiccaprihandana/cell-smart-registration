@@ -285,6 +285,8 @@ class AdminManagementFlowTest extends TestCase
             ]))
             ->assertOk()
             ->assertSee('Rekap Keseluruhan')
+            ->assertSee('Rekap Administrasi CELL')
+            ->assertSee('Data Pendaftaran')
             ->assertSee('English for Recap')
             ->assertSee('Siswa Rekap')
             ->assertSee('Upper-Intermediate')
@@ -315,13 +317,18 @@ class AdminManagementFlowTest extends TestCase
         $this->assertNotFalse($archive->locateName('xl/workbook.xml'));
         $this->assertNotFalse($archive->locateName('xl/worksheets/sheet1.xml'));
         $workbookXml = $archive->getFromName('xl/workbook.xml');
+        $studentSheetXml = $archive->getFromName('xl/worksheets/sheet3.xml');
 
         $this->assertIsString($workbookXml);
+        $this->assertIsString($studentSheetXml);
         $this->assertStringContainsString('name="Ringkasan"', $workbookXml);
         $this->assertStringContainsString('name="Per Program"', $workbookXml);
-        $this->assertStringContainsString('name="Pendaftaran"', $workbookXml);
+        $this->assertStringContainsString('name="Data Siswa"', $workbookXml);
         $this->assertStringContainsString('name="Placement Test"', $workbookXml);
         $this->assertStringContainsString('name="Jadwal Kelas"', $workbookXml);
+        $this->assertStringContainsString('Siswa Rekap', $studentSheetXml);
+        $this->assertStringContainsString('Selesai', $studentSheetXml);
+        $this->assertStringContainsString('Terjadwal', $studentSheetXml);
 
         $archive->close();
         @unlink($exportPath);
@@ -337,7 +344,7 @@ class AdminManagementFlowTest extends TestCase
             ->assertSessionHasErrors('to');
     }
 
-    public function test_exported_program_recap_formats_many_student_names_as_a_bounded_numbered_list(): void
+    public function test_exported_recap_separates_program_summary_from_student_detail_rows(): void
     {
         $program = $this->createProgram('English for Export', 'Bahasa Inggris');
 
@@ -369,11 +376,16 @@ class AdminManagementFlowTest extends TestCase
         $this->assertTrue($archive->open($exportPath) === true);
 
         $programSheetXml = $archive->getFromName('xl/worksheets/sheet2.xml');
+        $studentSheetXml = $archive->getFromName('xl/worksheets/sheet3.xml');
 
         $this->assertIsString($programSheetXml);
-        $this->assertStringContainsString("1. Siswa 01 Export\n2. Siswa 02 Export", $programSheetXml);
-        $this->assertStringContainsString("8. Siswa 08 Export\n+ 2 siswa lainnya (lihat sheet Pendaftaran)", $programSheetXml);
-        $this->assertMatchesRegularExpression('/<row r="2"[^>]*ht="162"[^>]*>/', $programSheetXml);
+        $this->assertIsString($studentSheetXml);
+        $this->assertStringNotContainsString('Nama Siswa', $programSheetXml);
+        $this->assertStringNotContainsString('Siswa 01 Export', $programSheetXml);
+        $this->assertStringContainsString('Nama Siswa', $studentSheetXml);
+        $this->assertStringContainsString('Siswa 01 Export', $studentSheetXml);
+        $this->assertStringContainsString('Siswa 10 Export', $studentSheetXml);
+        $this->assertStringContainsString('<row r="11"', $studentSheetXml);
 
         $archive->close();
         @unlink($exportPath);
